@@ -1,0 +1,32 @@
+/* LHISKEY KICK TRADES — Admin dashboard stylesheet */
+
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#060606;--bg2:#0e0e0e;--card:#111111;--border:#232323;--border2:#333;
+  --green:#00ff87;--green-dim:#00ff8715;--text:#f0f0f0;--muted:#777;--red:#ff4b4b;
+  --shadow:0 0 40px #00ff8718;
+}
+body{min-height:100vh;background:radial-gradient(circle at top left,#00ff8712,transparent 35%),var(--bg);color:var(--text);font-family:'Inter',sans-serif;}
+.admin-shell{min-height:100vh;display:grid;grid-template-columns:380px 1fr;}
+.brand-panel{border-right:1px solid var(--border);background:linear-gradient(180deg,var(--bg2),#050505);padding:48px;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden;}
+.brand-panel::before{content:'';position:absolute;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:50px 50px;opacity:.28;mask-image:radial-gradient(circle at 50% 40%,black,transparent 75%);}
+.brand-panel>*{position:relative;}
+.brand-badge,.section-tag{font-family:'DM Mono',monospace;font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--green);}
+.brand-badge{display:inline-block;width:max-content;border:1px solid #00ff8735;background:var(--green-dim);padding:6px 12px;margin-bottom:24px;}
+.brand-panel h1{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(2.2rem,4vw,4rem);line-height:.95;letter-spacing:-2px;margin-bottom:22px;}
+.brand-panel h1 span{color:var(--green);}
+.brand-panel p{color:var(--muted);line-height:1.7;max-width:280px;}
+.site-link{margin-top:28px;color:var(--green);text-decoration:none;font-family:'DM Mono',monospace;font-size:.82rem;}
+.login-panel,.dashboard-panel{padding:48px;display:flex;align-items:center;justify-content:center;}
+.dashboard-panel{align-items:flex-start;flex-direction:column;justify-content:flex-start;}
+.card{width:min(460px,100%);background:var(--card);border:1px solid var(--border2);padding:36px;box-shadow:var(--shadow);}
+h2{font-family:'Syne',sans-serif;font-size:2rem;letter-spacing:-1px;margin:10px 0;}
+h3{font-family:'Syne',sans-serif;}.muted{color:var(--muted);line-height:1.6;font-size:.92rem;}
+label{display:block;margin-top:20px;margin-bottom:8px;color:var(--muted);font-size:.82rem;text-transform:uppercase;letter-spacing:.6px;}
+input{width:100%;background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:14px 16px;outline:none;font-family:'Inter',sans-serif;}
+input:focus{border-color:var(--green);}button{margin-top:22px;background:var(--green);color:#000;border:none;cursor:pointer;padding:13px 22px;font-family:'Syne',sans-serif;font-weight:800;text-transform:uppercase;letter-spacing:.6px;}
+button:hover{background:#fff;}button:disabled{opacity:.6;cursor:not-allowed;}.message{margin-top:14px;color:var(--muted);font-family:'DM Mono',monospace;font-size:.8rem;}.hidden{display:none;}
+.dashboard-top{width:100%;display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:24px;}.actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;}.actions button{margin-top:0;}.ghost-btn{background:transparent;color:var(--green);border:1px solid #00ff8735;}.danger-btn{background:transparent;color:var(--red);border:1px solid #ff4b4b45;}
+.stats-grid{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:22px;}.stat-card{background:var(--card);border:1px solid var(--border);padding:24px;}.stat-card span{display:block;font-family:'Syne',sans-serif;font-weight:800;font-size:2rem;color:var(--green);margin-bottom:4px;}.stat-card p{color:var(--muted);font-size:.82rem;text-transform:uppercase;letter-spacing:.6px;}
+.table-card{width:100%;background:var(--card);border:1px solid var(--border);}.table-header{padding:20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:18px;}.table-header input{max-width:280px;}.table-wrap{width:100%;overflow-x:auto;}table{width:100%;border-collapse:collapse;}th,td{padding:15px 20px;text-align:left;border-bottom:1px solid var(--border);font-size:.9rem;}th{color:var(--green);font-family:'DM Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:1px;}td{color:var(--muted);}td:nth-child(2){color:var(--text);}
+@media(max-width:900px){.admin-shell{grid-template-columns:1fr;}.brand-panel{border-right:none;border-bottom:1px solid var(--border);padding:36px 24px;}.brand-panel p{max-width:100%;}.login-panel,.dashboard-panel{padding:28px 18px;}.dashboard-top,.table-header{flex-direction:column;align-items:flex-start;}.actions{justify-content:flex-start;}.stats-grid{grid-template-columns:1fr;}.table-header input{max-width:100%;}}

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LHISKEY KICK TRADES — Admin Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="admin.css"/>
+</head>
+<body>
+
+  <main class="admin-shell">
+    <section class="brand-panel">
+      <div class="brand-badge">Admin Control</div>
+      <h1>LHISKEY <span>KICK TRADES</span></h1>
+      <p>Secure backend dashboard for managing website watchlist signups.</p>
+      <a href="index.html" class="site-link">← Back to website</a>
+    </section>
+
+    <section class="login-panel" id="loginPanel">
+      <div class="card">
+        <p class="section-tag">→ Secure Login</p>
+        <h2>Admin Sign In</h2>
+        <p class="muted">Use the admin email and password you created inside Supabase Authentication.</p>
+
+        <label>Email</label>
+        <input type="email" id="adminEmail" placeholder="admin@email.com" autocomplete="email"/>
+
+        <label>Password</label>
+        <input type="password" id="adminPassword" placeholder="Your password" autocomplete="current-password"/>
+
+        <button id="loginBtn" onclick="loginAdmin()">Login</button>
+        <p class="message" id="loginMessage"></p>
+      </div>
+    </section>
+
+    <section class="dashboard-panel hidden" id="dashboardPanel">
+      <div class="dashboard-top">
+        <div>
+          <p class="section-tag">→ Dashboard</p>
+          <h2>Watchlist Emails</h2>
+          <p class="muted">View emails collected from your live website.</p>
+        </div>
+
+        <div class="actions">
+          <button class="ghost-btn" onclick="loadWatchlist()">Refresh</button>
+          <button class="ghost-btn" onclick="downloadCSV()">Download CSV</button>
+          <button class="danger-btn" onclick="logoutAdmin()">Logout</button>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span id="totalCount">0</span>
+          <p>Total Emails</p>
+        </div>
+        <div class="stat-card">
+          <span id="latestSignup">—</span>
+          <p>Latest Signup</p>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <h3>Subscribers</h3>
+          <input type="search" id="searchInput" placeholder="Search email..." oninput="renderWatchlist()"/>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Email</th>
+                <th>Source</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="watchlistBody">
+              <tr>
+                <td colspan="4">Loading...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p class="message" id="dashboardMessage"></p>
+    </section>
+  </main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="admin.js"></script>
+</body>
+</html>
