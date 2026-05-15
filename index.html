@@ -18,7 +18,9 @@
     <li><a href="#why">Community</a></li>
     <li><a href="#risk">Risk</a></li>
     <li><a href="#join">Join</a></li>
+    <li><a href="#strategies">Strategies</a></li>
     <li><a href="#contact">Contact</a></li>
+    <li><a href="admin.html">Admin</a></li>
   </ul>
   <button class="nav-cta" onclick="document.getElementById('join').scrollIntoView({behavior:'smooth'})">Get Access</button>
 </nav>
@@ -34,17 +36,19 @@
   <div class="hero-orb"></div>
   <div class="hero-tag fade-up">
     <span class="hero-tag-dot"></span>
-    Forex Education · Market Structure · Risk First
+    <span id="heroTagText">Forex Education · Market Structure · Risk First</span>
   </div>
   <h1 class="fade-up">
-    Read The Market.<br/><em>Trade With Discipline.</em><br/>Grow With Skill.
+    <span id="heroLine1">Read The Market.</span><br/>
+    <em id="heroHighlight">Trade With Discipline.</em><br/>
+    <span id="heroLine3">Grow With Skill.</span>
   </h1>
-  <p class="hero-sub fade-up">
+  <p class="hero-sub fade-up" id="heroSubtitle">
     LHISKEY KICK TRADES helps serious traders understand price action, market structure, liquidity zones, and risk management before taking any trade.
   </p>
   <div class="hero-actions fade-up">
-    <button class="btn-primary" onclick="document.getElementById('join').scrollIntoView({behavior:'smooth'})">Join Free Watchlist →</button>
-    <button class="btn-ghost" onclick="document.getElementById('tools').scrollIntoView({behavior:'smooth'})">Explore Tools</button>
+    <button class="btn-primary" id="primaryHeroBtn" onclick="document.getElementById('join').scrollIntoView({behavior:'smooth'})">Join Free Watchlist →</button>
+    <button class="btn-ghost" id="secondaryHeroBtn" onclick="document.getElementById('tools').scrollIntoView({behavior:'smooth'})">Explore Tools</button>
   </div>
 </section>
 
@@ -204,6 +208,22 @@
 </section>
 
 
+
+<!-- STRATEGIES -->
+<section id="strategies" class="strategies-section">
+  <p class="section-tag">→ Published Strategies</p>
+  <h2 class="section-title fade-up">Trading Strategies<br/>From The Admin Desk</h2>
+  <p class="section-sub fade-up">
+    Published strategies from LHISKEY KICK TRADES will appear here automatically after you add them from the admin dashboard.
+  </p>
+  <div class="strategy-grid" id="publicStrategies">
+    <div class="strategy-public-card fade-up">
+      <h3>No strategies published yet</h3>
+      <p>Add and publish your first strategy from the admin dashboard.</p>
+    </div>
+  </div>
+</section>
+
 <!-- CONTACT -->
 <section class="contact" id="contact">
   <p class="section-tag">→ Contact & Community</p>
@@ -216,37 +236,64 @@
     <div class="contact-card fade-up">
       <h3>WhatsApp</h3>
       <p>Fast enquiries, mentorship requests, and quick support.</p>
-      <a href="https://wa.me/254113881279" target="_blank">+254 113 881 279</a><br/>
-      <a href="https://wa.me/254743520031" target="_blank">+254 743 520 031</a><br/>
-      <a href="https://wa.me/254742307706" target="_blank">+254 742 307 706</a>
+      <a id="contactWhatsapp1" href="https://wa.me/254113881279" target="_blank">+254 113 881 279</a><br/>
+      <a id="contactWhatsapp2" href="https://wa.me/254743520031" target="_blank">+254 743 520 031</a><br/>
+      <a id="contactWhatsapp3" href="https://wa.me/254742307706" target="_blank">+254 742 307 706</a>
     </div>
 
     <div class="contact-card fade-up">
       <h3>Email</h3>
       <p>For serious business, partnerships, and official communication.</p>
-      <a href="mailto:owinoemmanuel245@gmail.com">owinoemmanuel245@gmail.com</a>
+      <a id="contactEmail" href="mailto:owinoemmanuel245@gmail.com">owinoemmanuel245@gmail.com</a>
     </div>
 
     <div class="contact-card fade-up">
       <h3>Social Media</h3>
       <p>Follow LHISKEY KICK TRADES for market notes, updates, and community posts.</p>
-      <a href="https://www.facebook.com/lhiskey.berd.5" target="_blank">Facebook</a><br/>
-      <a href="https://www.instagram.com/lhiskeyberd56?igsh=MXF2emFoczhpOWpwdg==" target="_blank">Instagram</a>
+      <a id="contactFacebook" href="https://www.facebook.com/lhiskey.berd.5" target="_blank">Facebook</a><br/>
+      <a id="contactInstagram" href="https://www.instagram.com/lhiskeyberd56?igsh=MXF2emFoczhpOWpwdg==" target="_blank">Instagram</a>
     </div>
   </div>
 </section>
 
 <!-- FLOATING WHATSAPP -->
-<a class="floating-whatsapp" href="https://wa.me/254113881279" target="_blank">WhatsApp</a>
+<a class="floating-whatsapp" id="floatingWhatsapp" href="https://wa.me/254113881279" target="_blank">WhatsApp</a>
+
+
+<!-- AI ASSISTANT WIDGET -->
+<div class="ai-widget" id="aiWidget">
+  <button class="ai-toggle" id="aiToggle" onclick="toggleAssistant()">AI Assistant</button>
+
+  <div class="ai-panel" id="aiPanel">
+    <div class="ai-head">
+      <div>
+        <strong id="assistantName">LHISKEY AI Assistant</strong>
+        <span id="assistantStatus">Offline support mode</span>
+      </div>
+      <button onclick="toggleAssistant()">×</button>
+    </div>
+
+    <div class="ai-messages" id="aiMessages">
+      <div class="ai-msg bot" id="assistantWelcome">
+        Hello, welcome to LHISKEY KICK TRADES. How can I help you today?
+      </div>
+    </div>
+
+    <div class="ai-form">
+      <input id="aiInput" type="text" placeholder="Ask about strategies, contacts, sessions..."/>
+      <button onclick="sendAssistantMessage()">Send</button>
+    </div>
+  </div>
+</div>
 
 <!-- FOOTER -->
 <footer>
   <div class="footer-left">© 2026 <span>LHISKEY KICK TRADES</span> · Built for disciplined traders.</div>
   <div class="footer-links">
-    <a href="https://wa.me/254113881279" target="_blank">WhatsApp</a>
-    <a href="mailto:owinoemmanuel245@gmail.com">Email</a>
-    <a href="https://www.facebook.com/lhiskey.berd.5" target="_blank">Facebook</a>
-    <a href="https://www.instagram.com/lhiskeyberd56?igsh=MXF2emFoczhpOWpwdg==" target="_blank">Instagram</a>
+    <a id="footerWhatsapp" href="https://wa.me/254113881279" target="_blank">WhatsApp</a>
+    <a id="footerEmail" href="mailto:owinoemmanuel245@gmail.com">Email</a>
+    <a id="footerFacebook" href="https://www.facebook.com/lhiskey.berd.5" target="_blank">Facebook</a>
+    <a id="footerInstagram" href="https://www.instagram.com/lhiskeyberd56?igsh=MXF2emFoczhpOWpwdg==" target="_blank">Instagram</a>
     <a href="#join">Watchlist</a>
   </div>
   <div class="footer-right">EAT · SLEEP · TRADE · REPEAT</div>

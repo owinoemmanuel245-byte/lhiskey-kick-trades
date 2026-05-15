@@ -1,7 +1,7 @@
 /* 
   LHISKEY KICK TRADES
   Main stylesheet.
-  Edit colors, spacing, layout, sections, and mobile responsiveness here.
+  Admin-editable public website version.
 */
 
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -371,3 +371,181 @@
     .nl-input{border-right:1px solid var(--border2);border-bottom:none;}
     .nl-card{padding:40px 24px;}
   }
+
+
+/* ── PUBLIC STRATEGIES ── */
+.strategies-section{
+  background:var(--bg2);
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+
+.strategy-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:1px;
+  background:var(--border);
+  border:1px solid var(--border);
+}
+
+.strategy-public-card{
+  background:var(--card);
+  padding:30px;
+  min-height:180px;
+}
+
+.strategy-public-card h3{
+  font-family:'Syne',sans-serif;
+  font-size:1.05rem;
+  margin-bottom:.7rem;
+}
+
+.strategy-public-card p{
+  color:var(--muted);
+  font-size:.88rem;
+  line-height:1.7;
+}
+
+.strategy-meta{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin:14px 0;
+}
+
+.strategy-meta span{
+  font-family:'DM Mono',monospace;
+  font-size:.68rem;
+  color:var(--green);
+  background:var(--green-dim);
+  border:1px solid #00ff8830;
+  padding:4px 8px;
+}
+
+/* ── AI ASSISTANT WIDGET ── */
+.ai-widget{
+  position:fixed;
+  left:22px;
+  bottom:22px;
+  z-index:130;
+}
+
+.ai-toggle{
+  background:var(--green);
+  color:#000;
+  font-family:'Syne',sans-serif;
+  font-weight:800;
+  text-transform:uppercase;
+  border:none;
+  cursor:pointer;
+  padding:13px 18px;
+  box-shadow:var(--green-glow);
+  clip-path:polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%);
+}
+
+.ai-panel{
+  display:none;
+  width:min(360px,calc(100vw - 36px));
+  height:470px;
+  background:var(--card);
+  border:1px solid var(--border2);
+  box-shadow:var(--green-glow);
+  margin-bottom:12px;
+  overflow:hidden;
+}
+
+.ai-panel.open{
+  display:flex;
+  flex-direction:column;
+}
+
+.ai-head{
+  padding:16px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:var(--bg2);
+}
+
+.ai-head strong{
+  display:block;
+  font-family:'Syne',sans-serif;
+}
+
+.ai-head span{
+  color:var(--muted);
+  font-size:.75rem;
+}
+
+.ai-head button{
+  background:transparent;
+  color:var(--green);
+  border:none;
+  font-size:1.3rem;
+  cursor:pointer;
+}
+
+.ai-messages{
+  flex:1;
+  overflow-y:auto;
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.ai-msg{
+  padding:10px 12px;
+  font-size:.86rem;
+  line-height:1.5;
+  max-width:88%;
+}
+
+.ai-msg.bot{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  color:var(--text);
+  align-self:flex-start;
+}
+
+.ai-msg.user{
+  background:var(--green);
+  color:#000;
+  align-self:flex-end;
+}
+
+.ai-form{
+  display:flex;
+  border-top:1px solid var(--border);
+}
+
+.ai-form input{
+  flex:1;
+  background:var(--bg2);
+  color:var(--text);
+  border:none;
+  padding:13px;
+  outline:none;
+}
+
+.ai-form button{
+  background:var(--green);
+  color:#000;
+  border:none;
+  padding:0 16px;
+  cursor:pointer;
+  font-family:'Syne',sans-serif;
+  font-weight:800;
+}
+
+@media(max-width:900px){
+  .strategy-grid{grid-template-columns:1fr;}
+}
+
+@media(max-width:580px){
+  .ai-widget{
+    left:14px;
+    bottom:76px;
+  }
+}

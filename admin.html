@@ -3,26 +3,40 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>LHISKEY KICK TRADES — Admin Dashboard</title>
+  <title>LHISKEY KICK TRADES — Admin CMS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="admin.css"/>
 </head>
 <body>
 
-  <main class="admin-shell">
-    <section class="brand-panel">
-      <div class="brand-badge">Admin Control</div>
+<main class="admin-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-badge">Control Center</div>
       <h1>LHISKEY <span>KICK TRADES</span></h1>
-      <p>Secure backend dashboard for managing website watchlist signups.</p>
-      <a href="index.html" class="site-link">← Back to website</a>
-    </section>
+      <p>Manage website content, strategies, bot files, assistant settings, and watchlist data.</p>
+    </div>
 
-    <section class="login-panel" id="loginPanel">
-      <div class="card">
+    <nav class="admin-tabs hidden" id="adminTabs">
+      <button class="tab active" onclick="switchTab('watchlist')">Watchlist</button>
+      <button class="tab" onclick="switchTab('content')">Homepage</button>
+      <button class="tab" onclick="switchTab('contacts')">Contacts</button>
+      <button class="tab" onclick="switchTab('strategies')">Strategies</button>
+      <button class="tab" onclick="switchTab('files')">Bot Files</button>
+      <button class="tab" onclick="switchTab('assistant')">AI Assistant</button>
+      <button class="tab danger" onclick="logoutAdmin()">Logout</button>
+    </nav>
+
+    <a href="index.html" class="site-link">← Back to website</a>
+  </aside>
+
+  <section class="main-area">
+    <section class="login-view" id="loginPanel">
+      <div class="card login-card">
         <p class="section-tag">→ Secure Login</p>
         <h2>Admin Sign In</h2>
-        <p class="muted">Use the admin email and password you created inside Supabase Authentication.</p>
+        <p class="muted">Use your Supabase admin email and password.</p>
 
         <label>Email</label>
         <input type="email" id="adminEmail" placeholder="admin@email.com" autocomplete="email"/>
@@ -35,60 +49,223 @@
       </div>
     </section>
 
-    <section class="dashboard-panel hidden" id="dashboardPanel">
-      <div class="dashboard-top">
-        <div>
-          <p class="section-tag">→ Dashboard</p>
-          <h2>Watchlist Emails</h2>
-          <p class="muted">View emails collected from your live website.</p>
+    <section class="dashboard hidden" id="dashboardPanel">
+
+      <div class="tab-panel active" id="tab-watchlist">
+        <div class="panel-head">
+          <div>
+            <p class="section-tag">→ Watchlist</p>
+            <h2>Collected Emails</h2>
+            <p class="muted">Emails submitted from your live website.</p>
+          </div>
+          <div class="actions">
+            <button class="ghost-btn" onclick="loadWatchlist()">Refresh</button>
+            <button class="ghost-btn" onclick="downloadCSV()">Download CSV</button>
+          </div>
         </div>
 
-        <div class="actions">
-          <button class="ghost-btn" onclick="loadWatchlist()">Refresh</button>
-          <button class="ghost-btn" onclick="downloadCSV()">Download CSV</button>
-          <button class="danger-btn" onclick="logoutAdmin()">Logout</button>
+        <div class="stats-grid">
+          <div class="stat-card"><span id="totalCount">0</span><p>Total Emails</p></div>
+          <div class="stat-card"><span id="latestSignup">—</span><p>Latest Signup</p></div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Subscribers</h3>
+            <input type="search" id="searchInput" placeholder="Search email..." oninput="renderWatchlist()"/>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Email</th><th>Source</th><th>Date</th></tr></thead>
+              <tbody id="watchlistBody"><tr><td colspan="4">Loading...</td></tr></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <div class="stats-grid">
-        <div class="stat-card">
-          <span id="totalCount">0</span>
-          <p>Total Emails</p>
+      <div class="tab-panel" id="tab-content">
+        <div class="panel-head">
+          <div>
+            <p class="section-tag">→ Homepage Editor</p>
+            <h2>Edit Hero Section</h2>
+            <p class="muted">Change the main text on your homepage without touching code.</p>
+          </div>
+          <button onclick="saveHomepage()">Save Homepage</button>
         </div>
-        <div class="stat-card">
-          <span id="latestSignup">—</span>
-          <p>Latest Signup</p>
+
+        <div class="form-grid">
+          <div class="form-card">
+            <label>Hero Tag</label>
+            <input id="heroTagInput" placeholder="Forex Education · Market Structure · Risk First"/>
+
+            <label>Title Line 1</label>
+            <input id="heroLine1Input"/>
+
+            <label>Highlighted Title Line</label>
+            <input id="heroHighlightInput"/>
+
+            <label>Title Line 3</label>
+            <input id="heroLine3Input"/>
+
+            <label>Hero Subtitle</label>
+            <textarea id="heroSubtitleInput"></textarea>
+
+            <label>Primary Button</label>
+            <input id="primaryButtonInput"/>
+
+            <label>Secondary Button</label>
+            <input id="secondaryButtonInput"/>
+          </div>
         </div>
       </div>
 
-      <div class="table-card">
-        <div class="table-header">
-          <h3>Subscribers</h3>
-          <input type="search" id="searchInput" placeholder="Search email..." oninput="renderWatchlist()"/>
+      <div class="tab-panel" id="tab-contacts">
+        <div class="panel-head">
+          <div>
+            <p class="section-tag">→ Contact Editor</p>
+            <h2>Edit Contact Details</h2>
+            <p class="muted">Update WhatsApp, email, and social links from here.</p>
+          </div>
+          <button onclick="saveContacts()">Save Contacts</button>
         </div>
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Email</th>
-                <th>Source</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody id="watchlistBody">
-              <tr>
-                <td colspan="4">Loading...</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="form-grid">
+          <div class="form-card">
+            <label>WhatsApp 1</label>
+            <input id="whatsapp1Input"/>
+
+            <label>WhatsApp 2</label>
+            <input id="whatsapp2Input"/>
+
+            <label>WhatsApp 3</label>
+            <input id="whatsapp3Input"/>
+
+            <label>Email</label>
+            <input id="emailInputAdmin"/>
+
+            <label>Facebook URL</label>
+            <input id="facebookInput"/>
+
+            <label>Instagram URL</label>
+            <input id="instagramInput"/>
+          </div>
         </div>
       </div>
 
-      <p class="message" id="dashboardMessage"></p>
+      <div class="tab-panel" id="tab-strategies">
+        <div class="panel-head">
+          <div>
+            <p class="section-tag">→ Strategy Library</p>
+            <h2>Add Trading Strategies</h2>
+            <p class="muted">Published strategies appear on the public website.</p>
+          </div>
+          <button onclick="saveStrategy()">Save Strategy</button>
+        </div>
+
+        <div class="form-grid two">
+          <div class="form-card">
+            <input type="hidden" id="strategyIdInput"/>
+
+            <label>Strategy Title</label>
+            <input id="strategyTitleInput" placeholder="Example: XAUUSD M15 Liquidity Sweep"/>
+
+            <label>Category</label>
+            <input id="strategyCategoryInput" value="Forex"/>
+
+            <label>Timeframe</label>
+            <input id="strategyTimeframeInput" value="M15"/>
+
+            <label>Short Description</label>
+            <textarea id="strategyDescriptionInput"></textarea>
+
+            <label>Full Strategy Notes</label>
+            <textarea id="strategyContentInput" class="large"></textarea>
+
+            <label class="checkbox-line">
+              <input type="checkbox" id="strategyPublishedInput"/>
+              Publish on website
+            </label>
+          </div>
+
+          <div class="list-card">
+            <h3>Saved Strategies</h3>
+            <div id="strategyList" class="mini-list">Loading...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-files">
+        <div class="panel-head">
+          <div>
+            <p class="section-tag">→ Bot & File Uploads</p>
+            <h2>Upload Bots, PDFs, Docs & Files</h2>
+            <p class="muted">Files are stored in your private Supabase Storage bucket.</p>
+          </div>
+          <button onclick="uploadBotFile()">Upload File</button>
+        </div>
+
+        <div class="form-grid two">
+          <div class="form-card">
+            <label>Choose File</label>
+            <input type="file" id="botFileInput"/>
+
+            <label>Category</label>
+            <select id="fileCategoryInput">
+              <option value="bot">Bot Code</option>
+              <option value="strategy">Strategy File</option>
+              <option value="pdf">PDF Guide</option>
+              <option value="image">Image/Poster</option>
+              <option value="other">Other</option>
+            </select>
+
+            <label>Notes</label>
+            <textarea id="fileNotesInput" placeholder="Describe this file..."></textarea>
+          </div>
+
+          <div class="list-card">
+            <h3>Uploaded Files</h3>
+            <div id="fileList" class="mini-list">Loading...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-assistant">
+        <div class="panel-head">
+          <div>
+            <p class="section-tag">→ AI Assistant Manager</p>
+            <h2>Assistant Settings</h2>
+            <p class="muted">Controls the public assistant widget. Real API-powered AI will be connected in the next server step.</p>
+          </div>
+          <button onclick="saveAssistantSettings()">Save Assistant</button>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-card">
+            <label>Assistant Name</label>
+            <input id="assistantNameInput"/>
+
+            <label>Status</label>
+            <select id="assistantStatusInput">
+              <option value="online">Online</option>
+              <option value="offline">Offline / Live agent unavailable</option>
+            </select>
+
+            <label>Welcome Message</label>
+            <textarea id="welcomeMessageInput"></textarea>
+
+            <label>Fallback Message</label>
+            <textarea id="fallbackMessageInput"></textarea>
+
+            <label>System Prompt / Behavior</label>
+            <textarea id="systemPromptInput" class="large"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <p class="message global" id="dashboardMessage"></p>
     </section>
-  </main>
+  </section>
+</main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="admin.js"></script>
