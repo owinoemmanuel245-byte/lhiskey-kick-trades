@@ -300,6 +300,9 @@ function addAssistantMessage(text, type){
 }
 
 let aiConversationHistory = [];
+let currentChatSessionId = localStorage.getItem('lhiskey_chat_session_id') || null;
+let liveChatLastMessageId = Number(localStorage.getItem('lhiskey_chat_last_id') || 0);
+let liveChatPollTimer = null;
 
 async function sendAssistantMessage(){
   const input = document.getElementById('aiInput');
@@ -327,6 +330,7 @@ async function sendAssistantMessage(){
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
       body: JSON.stringify({
+        session_id: currentChatSessionId,
         message: question,
         history: aiConversationHistory,
         assistantConfig,
@@ -342,15 +346,35 @@ async function sendAssistantMessage(){
       throw new Error(result.error || 'Assistant request failed');
     }
 
+    if(result.session_id){
+      currentChatSessionId = result.session_id;
+      localStorage.setItem('lhiskey_chat_session_id', currentChatSessionId);
+    }
+
+    const maxId = Math.max(Number(result.userMessageId || 0), Number(result.botMessageId || 0), liveChatLastMessageId);
+    if(maxId){
+      liveChatLastMessageId = maxId;
+      localStorage.setItem('lhiskey_chat_last_id', String(liveChatLastMessageId));
+    }
+
     thinkingMessage.textContent = result.reply;
     aiConversationHistory.push({ role:'assistant', content: result.reply });
     aiConversationHistory = aiConversationHistory.slice(-10);
 
     if(result.handoff){
-      addAssistantMessage('A handoff record has been created for the admin team. You can also use the WhatsApp button for faster support.', 'bot');
+      addAssistantMessage('A handoff record has been created. Keep this chat open — admin replies will appear here.', 'bot');
+      startLiveChatPolling();
+
+      if(result.handoff.request_details){
+        renderLeadCaptureForm(result.handoff);
+      }
+    }
+
+    if(result.live_mode || result.status === 'waiting_agent' || result.status === 'live_agent'){
+      startLiveChatPolling();
     }
   }catch(error){
-    console.warn('AI assistant backend failed:', error);
+    console.warn('Assistant backend failed:', error);
     const fallback = generateAssistantReply(question);
     thinkingMessage.textContent = fallback;
     aiConversationHistory.push({ role:'assistant', content: fallback });
@@ -358,6 +382,51 @@ async function sendAssistantMessage(){
   }
 
   messages.scrollTop = messages.scrollHeight;
+}
+
+function startLiveChatPolling(){
+  if(liveChatPollTimer || !currentChatSessionId) return;
+
+  liveChatPollTimer = setInterval(pollLiveChatMessages, 3500);
+  pollLiveChatMessages();
+}
+
+async function pollLiveChatMessages(){
+  if(!currentChatSessionId) return;
+
+  try{
+    const response = await fetch(`/api/chat-poll?session_id=${encodeURIComponent(currentChatSessionId)}&after_id=${liveChatLastMessageId}`);
+    const result = await response.json();
+
+    if(!response.ok) return;
+
+    (result.messages || []).forEach(msg => {
+      liveChatLastMessageId = Math.max(liveChatLastMessageId, Number(msg.id || 0));
+      localStorage.setItem('lhiskey_chat_last_id', String(liveChatLastMessageId));
+
+      if(msg.author_type === 'admin'){
+        addAssistantMessage(msg.content, 'admin');
+      }else if(msg.author_type === 'system'){
+        addAssistantMessage(msg.content, 'bot');
+      }
+    });
+
+    if(result.session && result.session.status === 'closed'){
+      addAssistantMessage('This live chat has been closed by admin. You can start a new support request anytime.', 'bot');
+      clearInterval(liveChatPollTimer);
+      liveChatPollTimer = null;
+      localStorage.removeItem('lhiskey_chat_session_id');
+      localStorage.removeItem('lhiskey_chat_last_id');
+      currentChatSessionId = null;
+      liveChatLastMessageId = 0;
+    }
+  }catch(error){
+    console.warn('Live chat polling failed:', error);
+  }
+}
+
+if(currentChatSessionId){
+  startLiveChatPolling();
 }
 
 function generateAssistantReply(question){
@@ -416,3 +485,80 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
 });
+
+
+
+// ── LEAD CAPTURE FORM AFTER HANDOFF
+function renderLeadCaptureForm(handoff){
+  const messages = document.getElementById('aiMessages');
+  if(!messages) return;
+
+  const phone = handoff.whatsapp || (cmsContacts && cmsContacts.whatsapp1) || '+254113881279';
+  const waLink = phoneToWaLink(phone);
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'ai-lead-form';
+  wrapper.innerHTML = `
+    <div class="lead-title">Request Live Support</div>
+    <input id="leadName" type="text" placeholder="Your name"/>
+    <input id="leadWhatsapp" type="text" placeholder="WhatsApp number"/>
+    <input id="leadEmail" type="email" placeholder="Email address optional"/>
+    <select id="leadPreferred">
+      <option value="whatsapp">Prefer WhatsApp</option>
+      <option value="email">Prefer Email</option>
+      <option value="call">Prefer Call</option>
+    </select>
+    <textarea id="leadMessage" placeholder="Briefly explain what you need help with..."></textarea>
+    <button onclick="submitLeadForm('${escapeAttr(handoff.reason || 'Live support request')}', '${escapeAttr(handoff.urgency || 'medium')}')">Send Request</button>
+    <a href="${waLink}" target="_blank">Open WhatsApp Now</a>
+    <p id="leadFormMsg"></p>
+  `;
+
+  messages.appendChild(wrapper);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+async function submitLeadForm(reason, urgency){
+  const msg = document.getElementById('leadFormMsg');
+  const payload = {
+    name: document.getElementById('leadName')?.value.trim(),
+    whatsapp: document.getElementById('leadWhatsapp')?.value.trim(),
+    email: document.getElementById('leadEmail')?.value.trim(),
+    preferred_contact: document.getElementById('leadPreferred')?.value,
+    message: document.getElementById('leadMessage')?.value.trim(),
+    reason,
+    urgency,
+    session_id: currentChatSessionId
+  };
+
+  if(!payload.name || !payload.whatsapp || !payload.message){
+    if(msg) msg.textContent = 'Name, WhatsApp, and message are required.';
+    return;
+  }
+
+  if(msg) msg.textContent = 'Sending request...';
+
+  try{
+    const response = await fetch('/api/lead', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+
+    if(!response.ok || !result.ok){
+      throw new Error(result.error || 'Lead request failed');
+    }
+
+    if(msg) msg.textContent = 'Request sent. The admin team will follow up.';
+    addAssistantMessage('Your support request has been saved. The admin team will follow up through your preferred contact method.', 'bot');
+  }catch(error){
+    if(msg) msg.textContent = 'Could not send request. Please use WhatsApp directly.';
+    console.warn('Lead form failed:', error);
+  }
+}
+
+function escapeAttr(value){
+  return String(value || '').replaceAll("'", '&#039;').replaceAll('"', '&quot;');
+}

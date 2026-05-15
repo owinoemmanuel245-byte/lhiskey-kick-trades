@@ -11,7 +11,11 @@ let watchlistData = [];
 let strategiesData = [];
 let filesData = [];
 let handoffsData = [];
+let leadsData = [];
 let knowledgeData = [];
+let liveChatSessions = [];
+let selectedLiveSessionId = null;
+let liveChatMessagesTimer = null;
 
 const loginPanel = document.getElementById('loginPanel');
 const dashboardPanel = document.getElementById('dashboardPanel');
@@ -92,7 +96,9 @@ async function bootstrapDashboard(){
     loadFiles(),
     loadAssistantSettings(),
     loadHandoffs(),
-    loadKnowledge()
+    loadKnowledge(),
+    loadLeads(),
+    loadLiveChats()
   ]);
 }
 
@@ -566,6 +572,266 @@ async function deleteKnowledge(id){
 
   await loadKnowledge();
   showMessage('Knowledge deleted.', 'green');
+}
+
+
+
+/* VISITOR LEADS */
+async function loadLeads(){
+  const body = document.getElementById('leadBody');
+  if(body) body.innerHTML = '<tr><td colspan="8">Loading...</td></tr>';
+
+  const { data, error } = await supabaseClient
+    .from('visitor_leads')
+    .select('*')
+    .order('created_at', { ascending:false })
+    .limit(200);
+
+  if(error){
+    if(body) body.innerHTML = '<tr><td colspan="8">Leads table not ready or access blocked.</td></tr>';
+    return;
+  }
+
+  leadsData = data || [];
+  renderLeads();
+}
+
+function renderLeads(){
+  const body = document.getElementById('leadBody');
+  if(!body) return;
+
+  const input = document.getElementById('leadSearchInput');
+  const search = input ? input.value.trim().toLowerCase() : '';
+
+  const filtered = leadsData.filter(item =>
+    String(item.name || '').toLowerCase().includes(search) ||
+    String(item.whatsapp || '').toLowerCase().includes(search) ||
+    String(item.email || '').toLowerCase().includes(search) ||
+    String(item.reason || '').toLowerCase().includes(search) ||
+    String(item.message || '').toLowerCase().includes(search)
+  );
+
+  if(filtered.length === 0){
+    body.innerHTML = '<tr><td colspan="8">No leads found.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = filtered.map((item,index)=>`
+    <tr>
+      <td>${index + 1}</td>
+      <td>${escapeHTML(item.name || '')}</td>
+      <td>${escapeHTML(item.whatsapp || '')}</td>
+      <td>${escapeHTML(item.email || '')}</td>
+      <td>${escapeHTML(item.reason || '').slice(0,90)}</td>
+      <td>${escapeHTML(item.urgency || 'medium')}</td>
+      <td>${escapeHTML(item.status || 'new')}</td>
+      <td>${formatDate(item.created_at)}</td>
+    </tr>
+  `).join('');
+}
+
+function downloadLeadsCSV(){
+  if(!leadsData || leadsData.length === 0){
+    showMessage('No leads to download.', 'red');
+    return;
+  }
+
+  const rows = [
+    ['id','name','whatsapp','email','preferred_contact','reason','urgency','message','status','created_at'],
+    ...leadsData.map(item => [
+      item.id,
+      item.name || '',
+      item.whatsapp || '',
+      item.email || '',
+      item.preferred_contact || '',
+      item.reason || '',
+      item.urgency || '',
+      item.message || '',
+      item.status || '',
+      item.created_at || ''
+    ])
+  ];
+
+  const csv = rows.map(row => row.map(value => `"${String(value).replaceAll('"','""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'lhiskey-kick-trades-leads.csv';
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+
+/* LIVE AGENT CHAT */
+async function loadLiveChats(){
+  const list = document.getElementById('liveSessionList');
+  if(list) list.innerHTML = '<p class="muted">Loading sessions...</p>';
+
+  const { data, error } = await supabaseClient
+    .from('chat_sessions')
+    .select('*')
+    .in('status', ['waiting_agent','live_agent','bot_mode','closed'])
+    .order('updated_at', { ascending:false })
+    .limit(100);
+
+  if(error){
+    if(list) list.innerHTML = '<p class="muted">Live chat tables not ready or access blocked.</p>';
+    return;
+  }
+
+  liveChatSessions = data || [];
+  renderLiveSessions();
+}
+
+function renderLiveSessions(){
+  const list = document.getElementById('liveSessionList');
+  if(!list) return;
+
+  if(liveChatSessions.length === 0){
+    list.innerHTML = '<p class="muted">No chat sessions yet.</p>';
+    return;
+  }
+
+  list.innerHTML = liveChatSessions.map(session => `
+    <div class="live-session-item ${session.id === selectedLiveSessionId ? 'active' : ''}" onclick="selectLiveSession('${session.id}')">
+      <strong>${escapeHTML(session.visitor_name || session.visitor_label || 'Website Visitor')}</strong>
+      <span>Status: ${escapeHTML(session.status || '')}</span>
+      <span>WhatsApp: ${escapeHTML(session.visitor_whatsapp || 'Not provided')}</span>
+      <span>${formatDate(session.updated_at || session.created_at)}</span>
+    </div>
+  `).join('');
+}
+
+async function selectLiveSession(sessionId){
+  selectedLiveSessionId = sessionId;
+  renderLiveSessions();
+  await loadLiveMessages();
+
+  if(liveChatMessagesTimer) clearInterval(liveChatMessagesTimer);
+  liveChatMessagesTimer = setInterval(loadLiveMessages, 3500);
+}
+
+async function loadLiveMessages(){
+  if(!selectedLiveSessionId) return;
+
+  const session = liveChatSessions.find(s => s.id === selectedLiveSessionId);
+
+  document.getElementById('liveChatTitle').textContent = session?.visitor_name || session?.visitor_label || 'Website Visitor';
+  document.getElementById('liveChatMeta').textContent =
+    `Status: ${session?.status || 'unknown'} · WhatsApp: ${session?.visitor_whatsapp || 'Not provided'} · Email: ${session?.visitor_email || 'Not provided'}`;
+
+  const { data, error } = await supabaseClient
+    .from('chat_messages')
+    .select('*')
+    .eq('session_id', selectedLiveSessionId)
+    .order('id', { ascending:true });
+
+  const box = document.getElementById('liveChatMessages');
+
+  if(error){
+    box.innerHTML = '<p class="muted">Could not load messages.</p>';
+    return;
+  }
+
+  if(!data || data.length === 0){
+    box.innerHTML = '<p class="muted">No messages yet.</p>';
+    return;
+  }
+
+  box.innerHTML = data.map(msg => `
+    <div class="live-msg ${escapeHTML(msg.author_type || 'system')}">
+      <strong>${labelAuthor(msg.author_type)}</strong><br/>
+      ${escapeHTML(msg.content || '')}
+      <br/><small>${formatDate(msg.created_at)}</small>
+    </div>
+  `).join('');
+
+  box.scrollTop = box.scrollHeight;
+}
+
+function labelAuthor(author){
+  if(author === 'visitor') return 'Visitor';
+  if(author === 'admin') return 'Admin';
+  if(author === 'bot') return 'Bot';
+  return 'System';
+}
+
+async function sendAdminReply(){
+  if(!selectedLiveSessionId){
+    showMessage('Select a chat first.', 'red');
+    return;
+  }
+
+  const input = document.getElementById('adminReplyInput');
+  const text = input.value.trim();
+
+  if(!text){
+    showMessage('Type a reply first.', 'red');
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from('chat_messages')
+    .insert([{
+      session_id: selectedLiveSessionId,
+      author_type: 'admin',
+      content: text
+    }]);
+
+  if(error){
+    showMessage('Reply failed: ' + error.message, 'red');
+    return;
+  }
+
+  await supabaseClient
+    .from('chat_sessions')
+    .update({ status:'live_agent', updated_at:new Date().toISOString() })
+    .eq('id', selectedLiveSessionId);
+
+  input.value = '';
+  await loadLiveChats();
+  await loadLiveMessages();
+  showMessage('Reply sent to visitor.', 'green');
+}
+
+async function markSelectedLive(){
+  if(!selectedLiveSessionId) return showMessage('Select a chat first.', 'red');
+
+  const { error } = await supabaseClient
+    .from('chat_sessions')
+    .update({ status:'live_agent', updated_at:new Date().toISOString() })
+    .eq('id', selectedLiveSessionId);
+
+  if(error) return showMessage('Could not take over: ' + error.message, 'red');
+
+  await loadLiveChats();
+  await loadLiveMessages();
+  showMessage('Chat is now in live agent mode.', 'green');
+}
+
+async function closeSelectedChat(){
+  if(!selectedLiveSessionId) return showMessage('Select a chat first.', 'red');
+  if(!confirm('Close this live chat?')) return;
+
+  await supabaseClient
+    .from('chat_messages')
+    .insert([{
+      session_id: selectedLiveSessionId,
+      author_type: 'system',
+      content: 'Admin has closed this live chat. You can start a new support request anytime.'
+    }]);
+
+  const { error } = await supabaseClient
+    .from('chat_sessions')
+    .update({ status:'closed', updated_at:new Date().toISOString() })
+    .eq('id', selectedLiveSessionId);
+
+  if(error) return showMessage('Could not close chat: ' + error.message, 'red');
+
+  await loadLiveChats();
+  await loadLiveMessages();
+  showMessage('Chat closed.', 'green');
 }
 
 

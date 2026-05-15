@@ -1,6 +1,6 @@
 {
-  "name": "lhiskey-kick-trades-gemini-brain",
-  "version": "6.0.0",
+  "name": "lhiskey-kick-trades-live-agent",
+  "version": "8.0.0",
   "private": true,
   "type": "module"
 }

@@ -25,6 +25,8 @@
       <button class="tab" onclick="switchTab('strategies')">Strategies</button>
       <button class="tab" onclick="switchTab('files')">Bot Files</button>
       <button class="tab" onclick="switchTab('knowledge')">Knowledge Base</button>
+      <button class="tab" onclick="switchTab('leads')">Leads</button>
+      <button class="tab" onclick="switchTab('livechat')">Live Chat</button>
       <button class="tab" onclick="switchTab('handoffs')">Handoffs</button>
       <button class="tab" onclick="switchTab('assistant')">AI Assistant</button>
       <button class="tab danger" onclick="logoutAdmin()">Logout</button>
@@ -277,6 +279,80 @@
           <div class="list-card">
             <h3>Saved Knowledge</h3>
             <div id="knowledgeList" class="mini-list">Loading...</div>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="tab-panel" id="tab-leads">
+        <div class="panel-head">
+          <div>
+            <p class="section-tag">→ Visitor Leads</p>
+            <h2>Live Support Requests</h2>
+            <p class="muted">Visitors who asked for support or left contact details through the AI assistant.</p>
+          </div>
+          <div class="actions">
+            <button class="ghost-btn" onclick="loadLeads()">Refresh</button>
+            <button class="ghost-btn" onclick="downloadLeadsCSV()">Download CSV</button>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Leads</h3>
+            <input type="search" id="leadSearchInput" placeholder="Search leads..." oninput="renderLeads()"/>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th><th>Name</th><th>WhatsApp</th><th>Email</th><th>Reason</th><th>Urgency</th><th>Status</th><th>Date</th>
+                </tr>
+              </thead>
+              <tbody id="leadBody">
+                <tr><td colspan="8">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="tab-panel" id="tab-livechat">
+        <div class="panel-head">
+          <div>
+            <p class="section-tag">→ Live Agent Takeover</p>
+            <h2>Reply To Visitors</h2>
+            <p class="muted">When a visitor asks for a live agent, open the session here and reply directly inside their website chat widget.</p>
+          </div>
+          <div class="actions">
+            <button class="ghost-btn" onclick="loadLiveChats()">Refresh</button>
+            <button class="ghost-btn" onclick="markSelectedLive()">Take Over</button>
+            <button class="danger-btn" onclick="closeSelectedChat()">Close Chat</button>
+          </div>
+        </div>
+
+        <div class="live-chat-layout">
+          <div class="live-session-list" id="liveSessionList">
+            Loading live sessions...
+          </div>
+
+          <div class="live-chat-box">
+            <div class="live-chat-head">
+              <div>
+                <h3 id="liveChatTitle">Select a chat</h3>
+                <p class="muted" id="liveChatMeta">Visitor messages and admin replies will appear here.</p>
+              </div>
+            </div>
+
+            <div class="live-chat-messages" id="liveChatMessages">
+              <p class="muted">No chat selected.</p>
+            </div>
+
+            <div class="live-reply">
+              <textarea id="adminReplyInput" placeholder="Type your reply to the visitor..."></textarea>
+              <button onclick="sendAdminReply()">Send</button>
+            </div>
           </div>
         </div>
       </div>
