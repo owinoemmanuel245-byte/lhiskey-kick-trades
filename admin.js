@@ -10,6 +10,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLI
 let watchlistData = [];
 let strategiesData = [];
 let filesData = [];
+let handoffsData = [];
 
 const loginPanel = document.getElementById('loginPanel');
 const dashboardPanel = document.getElementById('dashboardPanel');
@@ -88,7 +89,8 @@ async function bootstrapDashboard(){
     loadSettings(),
     loadStrategies(),
     loadFiles(),
-    loadAssistantSettings()
+    loadAssistantSettings(),
+    loadHandoffs()
   ]);
 }
 
@@ -443,6 +445,59 @@ async function deleteBotFile(id, path){
   await loadFiles();
   showMessage('File deleted.', 'green');
 }
+
+
+/* HANDOFFS */
+async function loadHandoffs(){
+  const body = document.getElementById('handoffBody');
+  if(body) body.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
+
+  const { data, error } = await supabaseClient
+    .from('handoffs')
+    .select('*')
+    .order('created_at', { ascending:false })
+    .limit(100);
+
+  if(error){
+    if(body) body.innerHTML = '<tr><td colspan="6">Handoffs table not ready or access blocked.</td></tr>';
+    return;
+  }
+
+  handoffsData = data || [];
+  renderHandoffs();
+}
+
+function renderHandoffs(){
+  const body = document.getElementById('handoffBody');
+  if(!body) return;
+
+  const input = document.getElementById('handoffSearchInput');
+  const search = input ? input.value.trim().toLowerCase() : '';
+
+  const filtered = handoffsData.filter(item =>
+    String(item.reason || '').toLowerCase().includes(search) ||
+    String(item.summary || '').toLowerCase().includes(search) ||
+    String(item.urgency || '').toLowerCase().includes(search) ||
+    String(item.status || '').toLowerCase().includes(search)
+  );
+
+  if(filtered.length === 0){
+    body.innerHTML = '<tr><td colspan="6">No handoff requests found.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = filtered.map((item,index)=>`
+    <tr>
+      <td>${index + 1}</td>
+      <td>${escapeHTML(item.urgency || 'medium')}</td>
+      <td>${escapeHTML(item.reason || '')}</td>
+      <td>${escapeHTML(item.summary || '').slice(0,180)}</td>
+      <td>${escapeHTML(item.status || 'new')}</td>
+      <td>${formatDate(item.created_at)}</td>
+    </tr>
+  `).join('');
+}
+
 
 /* ASSISTANT */
 async function loadAssistantSettings(){

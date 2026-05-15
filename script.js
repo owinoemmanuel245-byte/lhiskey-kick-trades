@@ -299,7 +299,9 @@ function addAssistantMessage(text, type){
   messages.scrollTop = messages.scrollHeight;
 }
 
-function sendAssistantMessage(){
+let aiConversationHistory = [];
+
+async function sendAssistantMessage(){
   const input = document.getElementById('aiInput');
   if(!input) return;
 
@@ -309,9 +311,53 @@ function sendAssistantMessage(){
   addAssistantMessage(question, 'user');
   input.value = '';
 
-  setTimeout(()=>{
-    addAssistantMessage(generateAssistantReply(question), 'bot');
-  }, 350);
+  aiConversationHistory.push({ role:'user', content: question });
+  aiConversationHistory = aiConversationHistory.slice(-10);
+
+  const thinkingMessage = document.createElement('div');
+  thinkingMessage.className = 'ai-msg bot';
+  thinkingMessage.textContent = 'Thinking...';
+
+  const messages = document.getElementById('aiMessages');
+  messages.appendChild(thinkingMessage);
+  messages.scrollTop = messages.scrollHeight;
+
+  try{
+    const response = await fetch('/api/assistant', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        message: question,
+        history: aiConversationHistory,
+        assistantConfig,
+        contacts: cmsContacts,
+        strategies: publicStrategiesCache.slice(0,8),
+        page: window.location.pathname
+      })
+    });
+
+    const result = await response.json();
+
+    if(!response.ok || !result.reply){
+      throw new Error(result.error || 'Assistant request failed');
+    }
+
+    thinkingMessage.textContent = result.reply;
+    aiConversationHistory.push({ role:'assistant', content: result.reply });
+    aiConversationHistory = aiConversationHistory.slice(-10);
+
+    if(result.handoff){
+      addAssistantMessage('A handoff record has been created for the admin team. You can also use the WhatsApp button for faster support.', 'bot');
+    }
+  }catch(error){
+    console.warn('AI assistant backend failed:', error);
+    const fallback = generateAssistantReply(question);
+    thinkingMessage.textContent = fallback;
+    aiConversationHistory.push({ role:'assistant', content: fallback });
+    aiConversationHistory = aiConversationHistory.slice(-10);
+  }
+
+  messages.scrollTop = messages.scrollHeight;
 }
 
 function generateAssistantReply(question){

@@ -24,6 +24,7 @@
       <button class="tab" onclick="switchTab('contacts')">Contacts</button>
       <button class="tab" onclick="switchTab('strategies')">Strategies</button>
       <button class="tab" onclick="switchTab('files')">Bot Files</button>
+      <button class="tab" onclick="switchTab('handoffs')">Handoffs</button>
       <button class="tab" onclick="switchTab('assistant')">AI Assistant</button>
       <button class="tab danger" onclick="logoutAdmin()">Logout</button>
     </nav>
@@ -225,6 +226,44 @@
           <div class="list-card">
             <h3>Uploaded Files</h3>
             <div id="fileList" class="mini-list">Loading...</div>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="tab-panel" id="tab-handoffs">
+        <div class="panel-head">
+          <div>
+            <p class="section-tag">→ Live Agent Handoffs</p>
+            <h2>Handoff Requests</h2>
+            <p class="muted">When the AI assistant decides a human should take over, the request appears here.</p>
+          </div>
+          <div class="actions">
+            <button class="ghost-btn" onclick="loadHandoffs()">Refresh</button>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Recent Handoffs</h3>
+            <input type="search" id="handoffSearchInput" placeholder="Search handoffs..." oninput="renderHandoffs()"/>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Urgency</th>
+                  <th>Reason</th>
+                  <th>Summary</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody id="handoffBody">
+                <tr><td colspan="6">Loading...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
