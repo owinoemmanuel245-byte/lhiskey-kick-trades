@@ -493,6 +493,12 @@ function renderLeadCaptureForm(handoff){
   const messages = document.getElementById('aiMessages');
   if(!messages) return;
 
+  const existingForm = document.querySelector('.ai-lead-form');
+  if(existingForm){
+    messages.scrollTop = messages.scrollHeight;
+    return;
+  }
+
   const phone = handoff.whatsapp || (cmsContacts && cmsContacts.whatsapp1) || '+254113881279';
   const waLink = phoneToWaLink(phone);
 
@@ -551,8 +557,9 @@ async function submitLeadForm(reason, urgency){
       throw new Error(result.error || 'Lead request failed');
     }
 
-    if(msg) msg.textContent = 'Request sent. The admin team will follow up.';
-    addAssistantMessage('Your support request has been saved. The admin team will follow up through your preferred contact method.', 'bot');
+    if(msg) msg.textContent = 'Request sent. Keep this chat open — admin can reply here too.';
+    addAssistantMessage('Your support request has been saved. Keep this chat open — admin can reply directly here, and can also follow up through your preferred contact method.', 'bot');
+    startLiveChatPolling();
   }catch(error){
     if(msg) msg.textContent = 'Could not send request. Please use WhatsApp directly.';
     console.warn('Lead form failed:', error);
@@ -562,3 +569,41 @@ async function submitLeadForm(reason, urgency){
 function escapeAttr(value){
   return String(value || '').replaceAll("'", '&#039;').replaceAll('"', '&quot;');
 }
+
+
+
+// ── CHAT RESET / NEW VISITOR SESSION
+function resetAssistantChat(){
+  localStorage.removeItem('lhiskey_chat_session_id');
+  localStorage.removeItem('lhiskey_chat_last_id');
+  currentChatSessionId = null;
+  liveChatLastMessageId = 0;
+
+  if(liveChatPollTimer){
+    clearInterval(liveChatPollTimer);
+    liveChatPollTimer = null;
+  }
+
+  const messages = document.getElementById('aiMessages');
+  if(messages){
+    messages.innerHTML = `
+      <div class="ai-msg bot" id="assistantWelcome">
+        ${assistantConfig.welcome_message || 'Hello, welcome to LHISKEY KICK TRADES. How can I help you today?'}
+      </div>
+    `;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(() => {
+    const head = document.querySelector('.ai-head');
+    if(head && !document.getElementById('newChatBtn')){
+      const btn = document.createElement('button');
+      btn.id = 'newChatBtn';
+      btn.textContent = '↻';
+      btn.title = 'Start new chat';
+      btn.onclick = resetAssistantChat;
+      head.appendChild(btn);
+    }
+  }, 500);
+});

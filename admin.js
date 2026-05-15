@@ -112,6 +112,10 @@ function switchTab(name){
 
   const panel = document.getElementById('tab-' + name);
   if(panel) panel.classList.add('active');
+
+  if(name === 'livechat'){
+    loadLiveChats();
+  }
 }
 
 /* WATCHLIST */
