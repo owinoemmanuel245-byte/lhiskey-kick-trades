@@ -1,5 +1,3 @@
-const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
-
 const SUPABASE_URL = "https://vwrsubmdecyvabktqtck.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_EMTHLqW_AybbMqz2gQqdRg_-1NMTgK-";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -7,83 +5,46 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const BASE_SYSTEM_PROMPT = `
 You are FX Assist, the official AI receptionist and forex knowledge specialist for LHISKEY KICK TRADES.
 
-## IDENTITY
+Identity:
 - Name: FX Assist
-- Role: AI Receptionist & Forex Knowledge Specialist
-- Personality: Sharp, precise, and professional — like a seasoned senior trader who is helpful, direct, and calm.
+- Role: AI Receptionist and Forex Knowledge Specialist
+- Personality: sharp, precise, professional, calm, and helpful.
 - You represent LHISKEY KICK TRADES.
 
-## ABSOLUTE RULES
-1. You are NOT a financial advisor. NEVER recommend what to buy, sell, or when to trade for a specific user.
+Rules:
+1. You are not a financial advisor. Never recommend what to buy, sell, or when to trade for a specific user.
 2. Always append this disclaimer when giving market analysis or strategy insight: "📊 Educational purposes only — not financial advice."
-3. Be concise. Traders value speed and precision. Keep responses under 180 words unless a deep explanation is explicitly needed.
-4. If you cannot safely answer, escalate gracefully or direct the visitor to official support.
-5. Respond only about forex, indices, financial markets, the trading platform, onboarding, strategies published on the site, or official LHISKEY KICK TRADES contact/support. Politely deflect off-topic queries.
+3. Keep responses under 180 words unless a deep explanation is explicitly needed.
+4. Respond only about forex, indices, financial markets, onboarding, published strategies, bots/tools described by admin, or official LHISKEY KICK TRADES support.
+5. Politely deflect off-topic queries.
+6. Do not promise guaranteed profits.
 
-## FOREX KNOWLEDGE BASE
-- Forex is a global decentralized market operating 24 hours/day, 5 days/week across Sydney, Tokyo, London, and New York sessions.
+Forex knowledge:
+- Forex operates 24 hours/day, 5 days/week across Sydney, Tokyo, London, and New York sessions.
 - Highest liquidity usually appears during the London–New York overlap.
 - Major pairs include EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, USD/CAD, and NZD/USD.
-- Pips: most pairs use 0.0001; JPY pairs usually use 0.01.
-- Lot sizes: standard 100,000 units; mini 10,000; micro 1,000; nano 100.
-- Position size formula: (Account Balance × Risk %) ÷ (Stop Loss pips × Pip Value per lot).
-- Leverage amplifies both profit potential and losses; high leverage increases risk.
-- Spread is the bid–ask gap; swaps/rollover may apply when holding overnight.
-- Slippage is the difference between expected and actual execution price.
-- Technical analysis includes support/resistance, trend lines, candlestick patterns, chart patterns, moving averages, RSI, MACD, Bollinger Bands, Stochastic, ATR, VWAP, Volume Profile, and Fibonacci retracements.
 - ICT/SMC concepts include order blocks, fair value gaps, breaker blocks, liquidity, BOS, CHOCH, mitigation, premium/discount, and kill zones.
-- Risk management is the core skill. Professionals often risk 0.5–2% per trade and stop after daily loss limits.
+- Risk management is the core skill. Many professionals risk 0.5–2% per trade and stop after daily loss limits.
 - Avoid revenge trading, overtrading, moving stop losses emotionally, and trading without a plan.
 - Fundamental drivers include interest rates, central banks, CPI, NFP, GDP, retail sales, PMI, unemployment, geopolitical risk, and safe-haven flows.
-- Indices include US30, US500/SPX500, NAS100, GER40/DE40, UK100, JPN225, AUS200, FRA40, and HK50.
 - Commodities relevant to forex platforms include XAU/USD gold, XAG/USD silver, crude oil, and natural gas.
-- Trading styles include scalping, day trading, swing trading, position trading, and algo/bot trading.
 - Platforms include MT4, MT5, TradingView, cTrader, VPS setups, and API trading.
 
-## ESCALATION
-Call trigger_handoff when:
-1. User asks for a human, live agent, support agent, or live chat.
-2. User has account-specific issues: deposit, withdrawal, verification, locked account, payment, subscription, or access.
-3. User expresses high frustration or aggressive language.
-4. User requests personalized trade signals, exact entry/exit advice, or instructions for their money.
-5. User reports a bug, technical outage, or platform malfunction.
-6. The query is outside the allowed business/trading scope and cannot be safely answered.
+Escalation:
+Create a handoff when:
+- User asks for a human, live agent, support agent, or live chat.
+- User has account-specific issues such as deposit, withdrawal, verification, locked account, payment, subscription, or access.
+- User is highly frustrated.
+- User asks for personal trade signals, exact entry/exit advice, or instructions for their money.
+- User reports a bug, technical outage, or platform malfunction.
 
-## TONE
-- Direct, helpful, and professional.
-- Use bullets when useful.
-- Do not overpromise results.
-- Do not guarantee profit.
+When escalation is needed, your response must start with:
+HANDOFF_REQUIRED
+Then include:
+Reason: ...
+Urgency: low/medium/high
+Summary: ...
 `.trim();
-
-const tools = [
-  {
-    type: "function",
-    function: {
-      name: "trigger_handoff",
-      description: "Escalates the conversation to a live human agent/admin.",
-      parameters: {
-        type: "object",
-        properties: {
-          reason: {
-            type: "string",
-            description: "Concise reason for handoff."
-          },
-          summary: {
-            type: "string",
-            description: "2-3 sentence context summary for the admin/human agent."
-          },
-          urgency: {
-            type: "string",
-            enum: ["low", "medium", "high"],
-            description: "Urgency level."
-          }
-        },
-        required: ["reason", "summary", "urgency"]
-      }
-    }
-  }
-];
 
 export default async function handler(request, response) {
   if (request.method !== "POST") {
@@ -91,15 +52,15 @@ export default async function handler(request, response) {
   }
 
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
+    const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
     if (!apiKey) {
-      return response.status(500).json({ error: "Missing OPENAI_API_KEY in Vercel environment variables." });
+      return response.status(500).json({ error: "Missing GEMINI_API_KEY in Vercel environment variables." });
     }
 
     const body = request.body || {};
     const userMessage = sanitizeText(body.message || "", 2000);
-
     if (!userMessage) {
       return response.status(400).json({ error: "Message is required." });
     }
@@ -107,54 +68,51 @@ export default async function handler(request, response) {
     const contacts = body.contacts || {};
     const strategies = Array.isArray(body.strategies) ? body.strategies.slice(0, 8) : [];
     const assistantConfig = body.assistantConfig || {};
-    const history = Array.isArray(body.history) ? body.history.slice(-10) : [];
+    const history = Array.isArray(body.history) ? body.history.slice(-8) : [];
     const knowledgeItems = await fetchKnowledgeBase(userMessage);
 
     const systemPrompt = buildSystemPrompt({ contacts, strategies, assistantConfig, knowledgeItems });
 
-    const messages = [
-      { role: "system", content: systemPrompt },
-      ...history
-        .filter((m) => m && (m.role === "user" || m.role === "assistant"))
-        .map((m) => ({ role: m.role, content: sanitizeText(m.content || "", 2000) })),
-      { role: "user", content: userMessage }
-    ];
+    const conversationText = history
+      .filter((m) => m && (m.role === "user" || m.role === "assistant"))
+      .map((m) => `${m.role === "user" ? "Visitor" : "Assistant"}: ${sanitizeText(m.content || "", 1400)}`)
+      .join("\n");
 
-    const ai = await fetch(OPENAI_CHAT_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: process.env.AI_MODEL || "gpt-4o-mini",
-        messages,
-        tools,
-        tool_choice: "auto",
-        temperature: 0.3,
-        max_tokens: 700
-      })
-    });
+    const prompt = `${systemPrompt}
 
-    const data = await ai.json();
+Recent conversation:
+${conversationText || "No previous conversation."}
 
-    if (!ai.ok) {
-      console.error("OpenAI error:", data);
-      return response.status(500).json({ error: "AI assistant failed to generate a response." });
+Visitor question:
+${userMessage}`;
+
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.35, maxOutputTokens: 700 }
+        })
+      }
+    );
+
+    const geminiData = await geminiRes.json();
+
+    if (!geminiRes.ok) {
+      console.error("Gemini API error:", geminiData);
+      return response.status(500).json({
+        error: "Gemini assistant failed to generate a response.",
+        details: geminiData?.error?.message || geminiData?.error || "Unknown Gemini error"
+      });
     }
 
-    const choice = data?.choices?.[0];
-    const message = choice?.message || {};
-    const toolCall = message?.tool_calls?.find((tc) => tc?.function?.name === "trigger_handoff");
+    let reply = extractGeminiText(geminiData) || "I could not generate a reply right now. Please use the WhatsApp button or try again shortly.";
 
-    if (toolCall) {
-      const handoff = safeParseHandoff(toolCall.function?.arguments);
-
-      const bridgeMsg =
-        `I'm connecting you with the LHISKEY KICK TRADES admin team now. 🔄\n\n` +
-        `Reason: ${handoff.reason}\n\n` +
-        `Your request has been recorded so you do not need to repeat yourself. ` +
-        `For faster help, use the WhatsApp button on the website.`;
+    const handoff = parseHandoff(reply);
+    if (handoff) {
+      const bridgeMsg = `I'm connecting you with the LHISKEY KICK TRADES admin team now. 🔄\n\nReason: ${handoff.reason}\n\nYour request has been recorded so you do not need to repeat yourself. For faster help, use the WhatsApp button on the website.`;
 
       await saveHandoff({
         ...handoff,
@@ -162,23 +120,13 @@ export default async function handler(request, response) {
         transcript: history.concat([{ role: "user", content: userMessage }])
       });
 
-      return response.status(200).json({
-        reply: bridgeMsg,
-        handoff
-      });
-    }
-
-    let reply = (message?.content || "").trim();
-
-    if (!reply) {
-      reply = "I could not generate a reply right now. Please use the WhatsApp button or try again shortly.";
+      return response.status(200).json({ reply: bridgeMsg, handoff });
     }
 
     reply = enforceTradingDisclaimer(reply, userMessage);
-
     return response.status(200).json({ reply });
   } catch (error) {
-    console.error("Assistant API error:", error);
+    console.error("Gemini assistant API error:", error);
     return response.status(500).json({ error: "Assistant server error." });
   }
 }
@@ -195,62 +143,36 @@ Official contacts:
 `.trim();
 
   const strategySummary = strategies.length
-    ? strategies.map((s, i) =>
-        `${i + 1}. ${sanitizeText(s.title || "Untitled", 160)} | ${sanitizeText(s.category || "Forex", 60)} | ${sanitizeText(s.timeframe || "M15", 40)} | ${sanitizeText(s.description || "", 300)}`
-      ).join("\n")
+    ? strategies.map((s, i) => `${i + 1}. ${sanitizeText(s.title || "Untitled", 160)} | ${sanitizeText(s.category || "Forex", 60)} | ${sanitizeText(s.timeframe || "M15", 40)} | ${sanitizeText(s.description || "", 300)}`).join("\n")
     : "No public strategies are currently published.";
 
   const knowledgeSummary = knowledgeItems.length
-    ? knowledgeItems.map((k, i) =>
-        `${i + 1}. [${sanitizeText(k.category || "knowledge", 60)}] ${sanitizeText(k.title || "Untitled", 160)}\n${sanitizeText(k.content || "", 900)}`
-      ).join("\n\n")
+    ? knowledgeItems.map((k, i) => `${i + 1}. [${sanitizeText(k.category || "knowledge", 60)}] ${sanitizeText(k.title || "Untitled", 160)}\n${sanitizeText(k.content || "", 1000)}`).join("\n\n")
     : "No admin knowledge base entries were found for this question.";
 
-  return `
-${BASE_SYSTEM_PROMPT}
+  return `${BASE_SYSTEM_PROMPT}
 
-## CURRENT WEBSITE CONTACTS
+Current website contacts:
 ${contactSummary}
 
-## PUBLISHED STRATEGIES FROM ADMIN DASHBOARD
+Published strategies:
 ${strategySummary}
 
-## ADMIN KNOWLEDGE BASE ENTRIES
+Admin knowledge base entries:
 Use these entries when relevant. They are more important than generic assumptions.
 ${knowledgeSummary}
 
-## ADMIN-EDITABLE ASSISTANT SETTINGS
+Admin-editable assistant settings:
 Assistant name: ${sanitizeText(assistantConfig.assistant_name || "FX Assist", 100)}
 Status: ${sanitizeText(assistantConfig.status || "offline", 40)}
 Welcome message: ${sanitizeText(assistantConfig.welcome_message || "", 400)}
 Fallback message: ${sanitizeText(assistantConfig.fallback_message || "", 500)}
 Admin behavior prompt:
-${sanitizeText(assistantConfig.system_prompt || "", 1800)}
-`.trim();
+${sanitizeText(assistantConfig.system_prompt || "", 1800)}`;
 }
-
-function safeParseHandoff(raw) {
-  try {
-    const parsed = JSON.parse(raw || "{}");
-    return {
-      reason: sanitizeText(parsed.reason || "Live agent requested", 200),
-      summary: sanitizeText(parsed.summary || "The visitor needs human assistance.", 600),
-      urgency: ["low", "medium", "high"].includes(parsed.urgency) ? parsed.urgency : "medium"
-    };
-  } catch {
-    return {
-      reason: "Live agent requested",
-      summary: "The visitor needs human assistance. Tool arguments could not be parsed.",
-      urgency: "medium"
-    };
-  }
-}
-
 
 async function fetchKnowledgeBase(userMessage) {
-  if (!SUPABASE_SERVICE_ROLE_KEY) {
-    return [];
-  }
+  if (!SUPABASE_SERVICE_ROLE_KEY) return [];
 
   try {
     const queryUrl = new URL(`${SUPABASE_URL}/rest/v1/knowledge_base`);
@@ -273,8 +195,7 @@ async function fetchKnowledgeBase(userMessage) {
     }
 
     const all = await res.json();
-    const keywords = extractKeywords(userMessage).slice(0, 6);
-
+    const keywords = extractKeywords(userMessage).slice(0, 8);
     if (!keywords.length) return all.slice(0, 8);
 
     return all
@@ -292,16 +213,6 @@ async function fetchKnowledgeBase(userMessage) {
   }
 }
 
-function extractKeywords(text) {
-  const stop = new Set(["what","when","where","which","about","please","tell","explain","your","you","are","how","can","the","and","for","with","from","that","this","have","need","want"]);
-  return String(text || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .split(/\s+/)
-    .filter((word) => word.length > 2 && !stop.has(word));
-}
-
-
 async function saveHandoff(handoff) {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/handoffs`, {
@@ -313,38 +224,58 @@ async function saveHandoff(handoff) {
         "Prefer": "return=minimal"
       },
       body: JSON.stringify({
-        reason: handoff.reason,
-        summary: handoff.summary,
-        urgency: handoff.urgency,
+        reason: sanitizeText(handoff.reason || "Live agent requested", 200),
+        summary: sanitizeText(handoff.summary || "The visitor needs human assistance.", 600),
+        urgency: ["low", "medium", "high"].includes(handoff.urgency) ? handoff.urgency : "medium",
         visitor_message: sanitizeText(handoff.visitor_message || "", 2000),
         transcript: handoff.transcript || [],
         status: "new"
       })
     });
 
-    if (!res.ok) {
-      const txt = await res.text();
-      console.error("Supabase handoff save failed:", txt);
-    }
+    if (!res.ok) console.error("Supabase handoff save failed:", await res.text());
   } catch (error) {
     console.error("Handoff save error:", error);
   }
 }
 
+function extractGeminiText(data) {
+  return data?.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("\n").trim() || "";
+}
+
+function parseHandoff(reply) {
+  if (!reply || !reply.trim().startsWith("HANDOFF_REQUIRED")) return null;
+  const reason = matchLine(reply, "Reason") || "Live agent requested";
+  const urgencyRaw = (matchLine(reply, "Urgency") || "medium").toLowerCase();
+  const summary = matchLine(reply, "Summary") || "The visitor needs human assistance.";
+  return {
+    reason: sanitizeText(reason, 200),
+    urgency: ["low", "medium", "high"].includes(urgencyRaw) ? urgencyRaw : "medium",
+    summary: sanitizeText(summary, 600)
+  };
+}
+
+function matchLine(text, label) {
+  const regex = new RegExp(`${label}:\\s*(.+)`, "i");
+  return text.match(regex)?.[1]?.trim() || "";
+}
+
 function enforceTradingDisclaimer(reply, userMessage) {
   const q = String(userMessage || "").toLowerCase();
-  const tradingTerms = ["trade", "forex", "xau", "gold", "entry", "signal", "strategy", "analysis", "buy", "sell", "setup", "risk", "market"];
+  const tradingTerms = ["trade", "forex", "xau", "gold", "entry", "signal", "strategy", "analysis", "buy", "sell", "setup", "risk", "market", "smc", "liquidity"];
   const needsDisclaimer = tradingTerms.some((term) => q.includes(term));
 
   if (needsDisclaimer && !reply.toLowerCase().includes("not financial advice")) {
     return `${reply}\n\n📊 Educational purposes only — not financial advice.`;
   }
-
   return reply;
 }
 
+function extractKeywords(text) {
+  const stop = new Set(["what","when","where","which","about","please","tell","explain","your","you","are","how","can","the","and","for","with","from","that","this","have","need","want"]);
+  return String(text || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((word) => word.length > 2 && !stop.has(word));
+}
+
 function sanitizeText(value, maxLength) {
-  return String(value || "")
-    .replace(/[<>]/g, "")
-    .slice(0, maxLength);
+  return String(value || "").replace(/[<>]/g, "").slice(0, maxLength);
 }
