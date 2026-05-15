@@ -1,53 +1,38 @@
 export default async function handler(request, response) {
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
-    const model = process.env.AI_MODEL || "gpt-4o-mini";
+    const apiKey = process.env.GEMINI_API_KEY;
+    const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
     if (!apiKey) {
+      return response.status(500).json({ ok: false, error: "GEMINI_API_KEY is missing in Vercel environment variables." });
+    }
+
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: "Reply with only: Gemini test working" }] }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 30 }
+        })
+      }
+    );
+
+    const data = await geminiRes.json();
+
+    if (!geminiRes.ok) {
       return response.status(500).json({
         ok: false,
-        error: "OPENAI_API_KEY is missing in Vercel environment variables."
+        gemini_status: geminiRes.status,
+        gemini_error: data.error || data
       });
     }
 
-    const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          {
-            role: "user",
-            content: "Reply with only: OpenAI test working"
-          }
-        ],
-        max_tokens: 20
-      })
-    });
+    const reply = data?.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("\n").trim();
 
-    const data = await openaiRes.json();
-
-    if (!openaiRes.ok) {
-      return response.status(500).json({
-        ok: false,
-        openai_status: openaiRes.status,
-        openai_error: data.error || data
-      });
-    }
-
-    return response.status(200).json({
-      ok: true,
-      model,
-      reply: data.choices?.[0]?.message?.content || data
-    });
-
+    return response.status(200).json({ ok: true, model, reply: reply || data });
   } catch (error) {
-    return response.status(500).json({
-      ok: false,
-      error: error.message
-    });
+    return response.status(500).json({ ok: false, error: error.message });
   }
 }
