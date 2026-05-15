@@ -11,6 +11,7 @@ let watchlistData = [];
 let strategiesData = [];
 let filesData = [];
 let handoffsData = [];
+let knowledgeData = [];
 
 const loginPanel = document.getElementById('loginPanel');
 const dashboardPanel = document.getElementById('dashboardPanel');
@@ -90,7 +91,8 @@ async function bootstrapDashboard(){
     loadStrategies(),
     loadFiles(),
     loadAssistantSettings(),
-    loadHandoffs()
+    loadHandoffs(),
+    loadKnowledge()
   ]);
 }
 
@@ -444,6 +446,126 @@ async function deleteBotFile(id, path){
 
   await loadFiles();
   showMessage('File deleted.', 'green');
+}
+
+
+
+/* KNOWLEDGE BASE */
+async function loadKnowledge(){
+  const list = document.getElementById('knowledgeList');
+  if(list) list.innerHTML = '<p class="muted">Loading knowledge...</p>';
+
+  const { data, error } = await supabaseClient
+    .from('knowledge_base')
+    .select('*')
+    .order('updated_at', { ascending:false });
+
+  if(error){
+    if(list) list.innerHTML = '<p class="muted">Knowledge table not ready or access blocked.</p>';
+    return;
+  }
+
+  knowledgeData = data || [];
+  renderKnowledge();
+}
+
+function renderKnowledge(){
+  const list = document.getElementById('knowledgeList');
+  if(!list) return;
+
+  if(knowledgeData.length === 0){
+    list.innerHTML = '<p class="muted">No knowledge entries added yet.</p>';
+    return;
+  }
+
+  list.innerHTML = knowledgeData.map(item => `
+    <div class="mini-item">
+      <h4>${escapeHTML(item.title || 'Untitled')}</h4>
+      <p>${escapeHTML(item.category || 'other')} · ${item.is_active ? 'Active' : 'Inactive'} · ${formatDate(item.updated_at || item.created_at)}</p>
+      <p>${escapeHTML(item.content || '').slice(0,150)}</p>
+      <div class="mini-actions">
+        <button class="ghost-btn" onclick="editKnowledge(${item.id})">Edit</button>
+        <button class="ghost-btn" onclick="toggleKnowledge(${item.id}, ${item.is_active ? 'false' : 'true'})">${item.is_active ? 'Deactivate' : 'Activate'}</button>
+        <button class="mini-danger" onclick="deleteKnowledge(${item.id})">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function editKnowledge(id){
+  const item = knowledgeData.find(k => k.id === id);
+  if(!item) return;
+
+  document.getElementById('knowledgeIdInput').value = item.id;
+  document.getElementById('knowledgeTitleInput').value = item.title || '';
+  document.getElementById('knowledgeCategoryInput').value = item.category || 'other';
+  document.getElementById('knowledgeTagsInput').value = Array.isArray(item.tags) ? item.tags.join(', ') : '';
+  document.getElementById('knowledgeContentInput').value = item.content || '';
+  document.getElementById('knowledgeActiveInput').checked = !!item.is_active;
+
+  showMessage('Knowledge loaded for editing.', 'green');
+}
+
+async function saveKnowledge(){
+  const id = document.getElementById('knowledgeIdInput').value;
+  const title = document.getElementById('knowledgeTitleInput').value.trim();
+  const category = document.getElementById('knowledgeCategoryInput').value;
+  const tags = document.getElementById('knowledgeTagsInput').value
+    .split(',')
+    .map(tag => tag.trim())
+    .filter(Boolean);
+  const content = document.getElementById('knowledgeContentInput').value.trim();
+  const is_active = document.getElementById('knowledgeActiveInput').checked;
+
+  if(!title || !content){
+    return showMessage('Knowledge title and content are required.', 'red');
+  }
+
+  const payload = { title, category, tags, content, is_active, updated_at: new Date().toISOString() };
+
+  let result;
+  if(id){
+    result = await supabaseClient.from('knowledge_base').update(payload).eq('id', id);
+  }else{
+    result = await supabaseClient.from('knowledge_base').insert([payload]);
+  }
+
+  if(result.error) return showMessage('Knowledge save failed: ' + result.error.message, 'red');
+
+  clearKnowledgeForm();
+  await loadKnowledge();
+  showMessage('Knowledge saved. The AI assistant can now use it.', 'green');
+}
+
+function clearKnowledgeForm(){
+  document.getElementById('knowledgeIdInput').value = '';
+  document.getElementById('knowledgeTitleInput').value = '';
+  document.getElementById('knowledgeCategoryInput').value = 'faq';
+  document.getElementById('knowledgeTagsInput').value = '';
+  document.getElementById('knowledgeContentInput').value = '';
+  document.getElementById('knowledgeActiveInput').checked = true;
+}
+
+async function toggleKnowledge(id, status){
+  const { error } = await supabaseClient
+    .from('knowledge_base')
+    .update({ is_active: status, updated_at:new Date().toISOString() })
+    .eq('id', id);
+
+  if(error) return showMessage('Knowledge status update failed: ' + error.message, 'red');
+
+  await loadKnowledge();
+  showMessage('Knowledge status updated.', 'green');
+}
+
+async function deleteKnowledge(id){
+  if(!confirm('Delete this knowledge entry?')) return;
+
+  const { error } = await supabaseClient.from('knowledge_base').delete().eq('id', id);
+  if(error) return showMessage('Knowledge delete failed: ' + error.message, 'red');
+
+  await loadKnowledge();
+  showMessage('Knowledge deleted.', 'green');
 }
 
 

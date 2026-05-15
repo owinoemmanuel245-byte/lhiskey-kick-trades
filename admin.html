@@ -24,6 +24,7 @@
       <button class="tab" onclick="switchTab('contacts')">Contacts</button>
       <button class="tab" onclick="switchTab('strategies')">Strategies</button>
       <button class="tab" onclick="switchTab('files')">Bot Files</button>
+      <button class="tab" onclick="switchTab('knowledge')">Knowledge Base</button>
       <button class="tab" onclick="switchTab('handoffs')">Handoffs</button>
       <button class="tab" onclick="switchTab('assistant')">AI Assistant</button>
       <button class="tab danger" onclick="logoutAdmin()">Logout</button>
@@ -230,6 +231,55 @@
         </div>
       </div>
 
+
+
+      <div class="tab-panel" id="tab-knowledge">
+        <div class="panel-head">
+          <div>
+            <p class="section-tag">→ AI Knowledge Base</p>
+            <h2>Train Your Assistant</h2>
+            <p class="muted">Add FAQs, bot descriptions, strategy rules, onboarding steps, pricing, support answers, and business knowledge. Active entries are used by the AI assistant.</p>
+          </div>
+          <button onclick="saveKnowledge()">Save Knowledge</button>
+        </div>
+
+        <div class="form-grid two">
+          <div class="form-card">
+            <input type="hidden" id="knowledgeIdInput"/>
+
+            <label>Title</label>
+            <input id="knowledgeTitleInput" placeholder="Example: How LHISKEY KICK TRADES helps beginners"/>
+
+            <label>Category</label>
+            <select id="knowledgeCategoryInput">
+              <option value="faq">FAQ</option>
+              <option value="bot">Bot Description</option>
+              <option value="strategy">Strategy Knowledge</option>
+              <option value="support">Support Answer</option>
+              <option value="pricing">Pricing / Offers</option>
+              <option value="onboarding">Onboarding</option>
+              <option value="rules">Business Rules</option>
+              <option value="other">Other</option>
+            </select>
+
+            <label>Tags</label>
+            <input id="knowledgeTagsInput" placeholder="comma separated e.g. gold, smc, beginner, mt5"/>
+
+            <label>Knowledge Content</label>
+            <textarea id="knowledgeContentInput" class="large" placeholder="Write the exact information the AI should know and use when answering visitors..."></textarea>
+
+            <label class="checkbox-line">
+              <input type="checkbox" id="knowledgeActiveInput" checked/>
+              Active for AI assistant
+            </label>
+          </div>
+
+          <div class="list-card">
+            <h3>Saved Knowledge</h3>
+            <div id="knowledgeList" class="mini-list">Loading...</div>
+          </div>
+        </div>
+      </div>
 
       <div class="tab-panel" id="tab-handoffs">
         <div class="panel-head">
