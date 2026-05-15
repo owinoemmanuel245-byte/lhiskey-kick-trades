@@ -2,6 +2,7 @@ const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 
 const SUPABASE_URL = "https://vwrsubmdecyvabktqtck.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_EMTHLqW_AybbMqz2gQqdRg_-1NMTgK-";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 const BASE_SYSTEM_PROMPT = `
 You are FX Assist, the official AI receptionist and forex knowledge specialist for LHISKEY KICK TRADES.
@@ -107,8 +108,9 @@ export default async function handler(request, response) {
     const strategies = Array.isArray(body.strategies) ? body.strategies.slice(0, 8) : [];
     const assistantConfig = body.assistantConfig || {};
     const history = Array.isArray(body.history) ? body.history.slice(-10) : [];
+    const knowledgeItems = await fetchKnowledgeBase(userMessage);
 
-    const systemPrompt = buildSystemPrompt({ contacts, strategies, assistantConfig });
+    const systemPrompt = buildSystemPrompt({ contacts, strategies, assistantConfig, knowledgeItems });
 
     const messages = [
       { role: "system", content: systemPrompt },
@@ -181,7 +183,7 @@ export default async function handler(request, response) {
   }
 }
 
-function buildSystemPrompt({ contacts, strategies, assistantConfig }) {
+function buildSystemPrompt({ contacts, strategies, assistantConfig, knowledgeItems = [] }) {
   const contactSummary = `
 Official contacts:
 - WhatsApp 1: ${sanitizeText(contacts.whatsapp1 || "", 80)}
@@ -198,6 +200,12 @@ Official contacts:
       ).join("\n")
     : "No public strategies are currently published.";
 
+  const knowledgeSummary = knowledgeItems.length
+    ? knowledgeItems.map((k, i) =>
+        `${i + 1}. [${sanitizeText(k.category || "knowledge", 60)}] ${sanitizeText(k.title || "Untitled", 160)}\n${sanitizeText(k.content || "", 900)}`
+      ).join("\n\n")
+    : "No admin knowledge base entries were found for this question.";
+
   return `
 ${BASE_SYSTEM_PROMPT}
 
@@ -206,6 +214,10 @@ ${contactSummary}
 
 ## PUBLISHED STRATEGIES FROM ADMIN DASHBOARD
 ${strategySummary}
+
+## ADMIN KNOWLEDGE BASE ENTRIES
+Use these entries when relevant. They are more important than generic assumptions.
+${knowledgeSummary}
 
 ## ADMIN-EDITABLE ASSISTANT SETTINGS
 Assistant name: ${sanitizeText(assistantConfig.assistant_name || "FX Assist", 100)}
@@ -233,6 +245,62 @@ function safeParseHandoff(raw) {
     };
   }
 }
+
+
+async function fetchKnowledgeBase(userMessage) {
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    return [];
+  }
+
+  try {
+    const queryUrl = new URL(`${SUPABASE_URL}/rest/v1/knowledge_base`);
+    queryUrl.searchParams.set("select", "id,title,category,tags,content,updated_at");
+    queryUrl.searchParams.set("is_active", "eq.true");
+    queryUrl.searchParams.set("order", "updated_at.desc");
+    queryUrl.searchParams.set("limit", "25");
+
+    const res = await fetch(queryUrl.toString(), {
+      headers: {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (!res.ok) {
+      console.error("Knowledge fetch failed:", await res.text());
+      return [];
+    }
+
+    const all = await res.json();
+    const keywords = extractKeywords(userMessage).slice(0, 6);
+
+    if (!keywords.length) return all.slice(0, 8);
+
+    return all
+      .map((item) => {
+        const haystack = `${item.title || ""} ${item.category || ""} ${(item.tags || []).join(" ")} ${item.content || ""}`.toLowerCase();
+        const score = keywords.reduce((total, kw) => total + (haystack.includes(kw) ? 1 : 0), 0);
+        return { ...item, _score: score };
+      })
+      .filter((item) => item._score > 0)
+      .sort((a, b) => b._score - a._score)
+      .slice(0, 8);
+  } catch (error) {
+    console.error("Knowledge lookup error:", error);
+    return [];
+  }
+}
+
+function extractKeywords(text) {
+  const stop = new Set(["what","when","where","which","about","please","tell","explain","your","you","are","how","can","the","and","for","with","from","that","this","have","need","want"]);
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 2 && !stop.has(word));
+}
+
 
 async function saveHandoff(handoff) {
   try {
