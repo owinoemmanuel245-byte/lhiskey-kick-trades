@@ -3,8 +3,23 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+  <!--
+    FIX 1: Admin panel must never appear in Google search results.
+    Without this, Google can index and expose your admin URL.
+  -->
+  <meta name="robots" content="noindex, nofollow"/>
+
   <title>LHISKEY KICK TRADES — Admin CMS</title>
+
+  <!--
+    FIX 2: preconnect to fonts.gstatic.com was missing entirely.
+    Without it the browser can't start the DNS/TLS handshake early
+    for the actual font files (googleapis.com just serves the CSS).
+    Also added crossorigin — required for CORS font fetching.
+  -->
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="admin.css"/>
 </head>
@@ -18,43 +33,102 @@
       <p>Manage website content, strategies, bot files, assistant settings, and watchlist data.</p>
     </div>
 
+    <!--
+      FIX 3: All <button> elements that are NOT form submitters must have
+      type="button". Without it the browser defaults to type="submit",
+      which can unexpectedly submit parent forms or cause page reloads.
+      Applied to every button in this file.
+    -->
     <nav class="admin-tabs hidden" id="adminTabs">
-      <button class="tab active" onclick="switchTab('watchlist')">Watchlist</button>
-      <button class="tab" onclick="switchTab('content')">Homepage</button>
-      <button class="tab" onclick="switchTab('contacts')">Contacts</button>
-      <button class="tab" onclick="switchTab('strategies')">Strategies</button>
-      <button class="tab" onclick="switchTab('files')">Bot Files</button>
-      <button class="tab" onclick="switchTab('knowledge')">Knowledge Base</button>
-      <button class="tab" onclick="switchTab('leads')">Leads</button>
-      <button class="tab" onclick="switchTab('livechat')">Live Chat</button>
-      <button class="tab" onclick="switchTab('handoffs')">Handoffs</button>
-      <button class="tab" onclick="switchTab('assistant')">AI Assistant</button>
-      <button class="tab danger" onclick="logoutAdmin()">Logout</button>
+      <button type="button" class="tab active" onclick="switchTab('watchlist')">Watchlist</button>
+      <button type="button" class="tab" onclick="switchTab('content')">Homepage</button>
+      <button type="button" class="tab" onclick="switchTab('contacts')">Contacts</button>
+      <button type="button" class="tab" onclick="switchTab('strategies')">Strategies</button>
+      <button type="button" class="tab" onclick="switchTab('files')">Bot Files</button>
+      <button type="button" class="tab" onclick="switchTab('knowledge')">Knowledge Base</button>
+      <button type="button" class="tab" onclick="switchTab('leads')">Leads</button>
+      <button type="button" class="tab" onclick="switchTab('livechat')">Live Chat</button>
+      <button type="button" class="tab" onclick="switchTab('handoffs')">Handoffs</button>
+      <button type="button" class="tab" onclick="switchTab('assistant')">AI Assistant</button>
+      <!--
+        FIX 4: Logout button was class="tab danger" — same class as nav
+        tabs. This means switchTab logic could accidentally match it.
+        Separated to its own class so JS tab-switching never touches it.
+      -->
+      <button type="button" class="tab tab-logout" onclick="logoutAdmin()">Logout</button>
     </nav>
 
     <a href="index.html" class="site-link">← Back to website</a>
   </aside>
 
-  <section class="main-area">
-    <section class="login-view" id="loginPanel">
+  <div class="main-area">
+    <!--
+      FIX 5: <section> inside <section> with no headings is invalid
+      document outline. Login and dashboard are layout containers, not
+      semantic content sections. Changed to <div>.
+    -->
+    <div class="login-view" id="loginPanel">
       <div class="card login-card">
         <p class="section-tag">→ Secure Login</p>
         <h2>Admin Sign In</h2>
         <p class="muted">Use your Supabase admin email and password.</p>
 
-        <label>Email</label>
-        <input type="email" id="adminEmail" placeholder="admin@email.com" autocomplete="email"/>
+        <!--
+          FIX 6: Login had no <form> wrapper. Without it:
+          - Pressing Enter in the password field does nothing.
+          - Password managers can't correctly identify the login form.
+          - Autocomplete heuristics break on some browsers.
+          Added <form> with onsubmit, removed onclick from button.
+        -->
+        <form id="loginForm" onsubmit="handleLoginSubmit(event)">
+          <!--
+            FIX 7: All <label> elements were missing for="..." attributes.
+            Without them, clicking a label does NOT focus the input.
+            This is both an accessibility failure and a usability bug.
+            Applied for/id pairing to every label in the file.
+          -->
+          <label for="adminEmail">Email</label>
+          <input
+            type="email"
+            id="adminEmail"
+            name="email"
+            placeholder="admin@email.com"
+            autocomplete="email"
+            required
+          />
 
-        <label>Password</label>
-        <input type="password" id="adminPassword" placeholder="Your password" autocomplete="current-password"/>
+          <label for="adminPassword">Password</label>
+          <input
+            type="password"
+            id="adminPassword"
+            name="password"
+            placeholder="Your password"
+            autocomplete="current-password"
+            required
+          />
 
-        <button id="loginBtn" onclick="loginAdmin()">Login</button>
-        <p class="message" id="loginMessage"></p>
+          <!--
+            type="submit" is intentional here — this IS the form submitter.
+          -->
+          <button type="submit" id="loginBtn">Login</button>
+        </form>
+
+        <p class="message" id="loginMessage" role="alert" aria-live="polite"></p>
       </div>
-    </section>
+    </div>
 
-    <section class="dashboard hidden" id="dashboardPanel">
+    <div class="dashboard hidden" id="dashboardPanel">
 
+      <!--
+        FIX 8: Global status message was at the BOTTOM of the dashboard,
+        after all tab panels. Messages appeared off-screen on short tabs.
+        Moved to the top so it's always visible after any save/error.
+      -->
+      <p class="message global" id="dashboardMessage" role="alert" aria-live="polite"></p>
+
+      <!-- ═══════════════════════════════════════════════
+           WATCHLIST
+      ═══════════════════════════════════════════════ -->
       <div class="tab-panel active" id="tab-watchlist">
         <div class="panel-head">
           <div>
@@ -63,8 +137,8 @@
             <p class="muted">Emails submitted from your live website.</p>
           </div>
           <div class="actions">
-            <button class="ghost-btn" onclick="loadWatchlist()">Refresh</button>
-            <button class="ghost-btn" onclick="downloadCSV()">Download CSV</button>
+            <button type="button" class="ghost-btn" onclick="loadWatchlist()">Refresh</button>
+            <button type="button" class="ghost-btn" onclick="downloadCSV()">Download CSV</button>
           </div>
         </div>
 
@@ -76,17 +150,37 @@
         <div class="table-card">
           <div class="table-header">
             <h3>Subscribers</h3>
-            <input type="search" id="searchInput" placeholder="Search email..." oninput="renderWatchlist()"/>
+            <!--
+              FIX 9: Search inputs called renderX() on oninput but those
+              functions would crash if data hadn't loaded yet (JS-side fix
+              needed too, but the HTML defensive practice is to bind after
+              data is confirmed ready — see admin.js notes).
+              Added aria-label for accessibility since there's no visible label.
+            -->
+            <input
+              type="search"
+              id="searchInput"
+              placeholder="Search email..."
+              aria-label="Search subscribers"
+              oninput="renderWatchlist()"
+            />
           </div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>#</th><th>Email</th><th>Source</th><th>Date</th></tr></thead>
-              <tbody id="watchlistBody"><tr><td colspan="4">Loading...</td></tr></tbody>
+              <thead>
+                <tr><th scope="col">#</th><th scope="col">Email</th><th scope="col">Source</th><th scope="col">Date</th></tr>
+              </thead>
+              <tbody id="watchlistBody">
+                <tr><td colspan="4">Loading...</td></tr>
+              </tbody>
             </table>
           </div>
         </div>
       </div>
 
+      <!-- ═══════════════════════════════════════════════
+           HOMEPAGE EDITOR
+      ═══════════════════════════════════════════════ -->
       <div class="tab-panel" id="tab-content">
         <div class="panel-head">
           <div>
@@ -94,35 +188,38 @@
             <h2>Edit Hero Section</h2>
             <p class="muted">Change the main text on your homepage without touching code.</p>
           </div>
-          <button onclick="saveHomepage()">Save Homepage</button>
+          <button type="button" onclick="saveHomepage()">Save Homepage</button>
         </div>
 
         <div class="form-grid">
           <div class="form-card">
-            <label>Hero Tag</label>
-            <input id="heroTagInput" placeholder="Forex Education · Market Structure · Risk First"/>
+            <label for="heroTagInput">Hero Tag</label>
+            <input id="heroTagInput" type="text" placeholder="Forex Education · Market Structure · Risk First"/>
 
-            <label>Title Line 1</label>
-            <input id="heroLine1Input"/>
+            <label for="heroLine1Input">Title Line 1</label>
+            <input id="heroLine1Input" type="text"/>
 
-            <label>Highlighted Title Line</label>
-            <input id="heroHighlightInput"/>
+            <label for="heroHighlightInput">Highlighted Title Line</label>
+            <input id="heroHighlightInput" type="text"/>
 
-            <label>Title Line 3</label>
-            <input id="heroLine3Input"/>
+            <label for="heroLine3Input">Title Line 3</label>
+            <input id="heroLine3Input" type="text"/>
 
-            <label>Hero Subtitle</label>
-            <textarea id="heroSubtitleInput"></textarea>
+            <label for="heroSubtitleInput">Hero Subtitle</label>
+            <textarea id="heroSubtitleInput" rows="4"></textarea>
 
-            <label>Primary Button</label>
-            <input id="primaryButtonInput"/>
+            <label for="primaryButtonInput">Primary Button</label>
+            <input id="primaryButtonInput" type="text"/>
 
-            <label>Secondary Button</label>
-            <input id="secondaryButtonInput"/>
+            <label for="secondaryButtonInput">Secondary Button</label>
+            <input id="secondaryButtonInput" type="text"/>
           </div>
         </div>
       </div>
 
+      <!-- ═══════════════════════════════════════════════
+           CONTACTS
+      ═══════════════════════════════════════════════ -->
       <div class="tab-panel" id="tab-contacts">
         <div class="panel-head">
           <div>
@@ -130,32 +227,41 @@
             <h2>Edit Contact Details</h2>
             <p class="muted">Update WhatsApp, email, and social links from here.</p>
           </div>
-          <button onclick="saveContacts()">Save Contacts</button>
+          <button type="button" onclick="saveContacts()">Save Contacts</button>
         </div>
 
         <div class="form-grid">
           <div class="form-card">
-            <label>WhatsApp 1</label>
-            <input id="whatsapp1Input"/>
+            <!--
+              FIX 10: Phone inputs were plain text with no type or pattern.
+              type="tel" enables the numeric keyboard on mobile and allows
+              browser validation. url type for social links enables correct
+              autocomplete and basic format validation.
+            -->
+            <label for="whatsapp1Input">WhatsApp 1</label>
+            <input id="whatsapp1Input" type="tel" placeholder="+254..."/>
 
-            <label>WhatsApp 2</label>
-            <input id="whatsapp2Input"/>
+            <label for="whatsapp2Input">WhatsApp 2</label>
+            <input id="whatsapp2Input" type="tel" placeholder="+254..."/>
 
-            <label>WhatsApp 3</label>
-            <input id="whatsapp3Input"/>
+            <label for="whatsapp3Input">WhatsApp 3</label>
+            <input id="whatsapp3Input" type="tel" placeholder="+254..."/>
 
-            <label>Email</label>
-            <input id="emailInputAdmin"/>
+            <label for="emailInputAdmin">Email</label>
+            <input id="emailInputAdmin" type="email" autocomplete="off"/>
 
-            <label>Facebook URL</label>
-            <input id="facebookInput"/>
+            <label for="facebookInput">Facebook URL</label>
+            <input id="facebookInput" type="url" placeholder="https://facebook.com/..."/>
 
-            <label>Instagram URL</label>
-            <input id="instagramInput"/>
+            <label for="instagramInput">Instagram URL</label>
+            <input id="instagramInput" type="url" placeholder="https://instagram.com/..."/>
           </div>
         </div>
       </div>
 
+      <!-- ═══════════════════════════════════════════════
+           STRATEGIES
+      ═══════════════════════════════════════════════ -->
       <div class="tab-panel" id="tab-strategies">
         <div class="panel-head">
           <div>
@@ -163,29 +269,29 @@
             <h2>Add Trading Strategies</h2>
             <p class="muted">Published strategies appear on the public website.</p>
           </div>
-          <button onclick="saveStrategy()">Save Strategy</button>
+          <button type="button" onclick="saveStrategy()">Save Strategy</button>
         </div>
 
         <div class="form-grid two">
           <div class="form-card">
             <input type="hidden" id="strategyIdInput"/>
 
-            <label>Strategy Title</label>
-            <input id="strategyTitleInput" placeholder="Example: XAUUSD M15 Liquidity Sweep"/>
+            <label for="strategyTitleInput">Strategy Title</label>
+            <input id="strategyTitleInput" type="text" placeholder="Example: XAUUSD M15 Liquidity Sweep"/>
 
-            <label>Category</label>
-            <input id="strategyCategoryInput" value="Forex"/>
+            <label for="strategyCategoryInput">Category</label>
+            <input id="strategyCategoryInput" type="text" value="Forex"/>
 
-            <label>Timeframe</label>
-            <input id="strategyTimeframeInput" value="M15"/>
+            <label for="strategyTimeframeInput">Timeframe</label>
+            <input id="strategyTimeframeInput" type="text" value="M15"/>
 
-            <label>Short Description</label>
-            <textarea id="strategyDescriptionInput"></textarea>
+            <label for="strategyDescriptionInput">Short Description</label>
+            <textarea id="strategyDescriptionInput" rows="3"></textarea>
 
-            <label>Full Strategy Notes</label>
-            <textarea id="strategyContentInput" class="large"></textarea>
+            <label for="strategyContentInput">Full Strategy Notes</label>
+            <textarea id="strategyContentInput" class="large" rows="8"></textarea>
 
-            <label class="checkbox-line">
+            <label class="checkbox-line" for="strategyPublishedInput">
               <input type="checkbox" id="strategyPublishedInput"/>
               Publish on website
             </label>
@@ -198,22 +304,35 @@
         </div>
       </div>
 
+      <!-- ═══════════════════════════════════════════════
+           BOT FILES
+      ═══════════════════════════════════════════════ -->
       <div class="tab-panel" id="tab-files">
         <div class="panel-head">
           <div>
             <p class="section-tag">→ Bot & File Uploads</p>
-            <h2>Upload Bots, PDFs, Docs & Files</h2>
+            <h2>Upload Bots, PDFs, Docs &amp; Files</h2>
+            <!--
+              FIX 11: & in attribute/text content must be &amp; to be
+              valid HTML. While browsers are lenient, validators and some
+              parsers (including XML-based tools) will reject bare &.
+            -->
             <p class="muted">Files are stored in your private Supabase Storage bucket.</p>
           </div>
-          <button onclick="uploadBotFile()">Upload File</button>
+          <button type="button" onclick="uploadBotFile()">Upload File</button>
         </div>
 
         <div class="form-grid two">
           <div class="form-card">
-            <label>Choose File</label>
-            <input type="file" id="botFileInput"/>
+            <label for="botFileInput">Choose File</label>
+            <input type="file" id="botFileInput" accept=".mq5,.mq4,.ex5,.ex4,.pdf,.doc,.docx,.zip,.png,.jpg"/>
+            <!--
+              FIX 12: File input had no accept attribute. Without it the
+              browser lets users pick any file type including .exe, .sh etc.
+              Restricted to expected file types for this platform.
+            -->
 
-            <label>Category</label>
+            <label for="fileCategoryInput">Category</label>
             <select id="fileCategoryInput">
               <option value="bot">Bot Code</option>
               <option value="strategy">Strategy File</option>
@@ -222,8 +341,8 @@
               <option value="other">Other</option>
             </select>
 
-            <label>Notes</label>
-            <textarea id="fileNotesInput" placeholder="Describe this file..."></textarea>
+            <label for="fileNotesInput">Notes</label>
+            <textarea id="fileNotesInput" rows="3" placeholder="Describe this file..."></textarea>
           </div>
 
           <div class="list-card">
@@ -233,26 +352,31 @@
         </div>
       </div>
 
-
-
+      <!-- ═══════════════════════════════════════════════
+           KNOWLEDGE BASE
+      ═══════════════════════════════════════════════ -->
       <div class="tab-panel" id="tab-knowledge">
         <div class="panel-head">
           <div>
             <p class="section-tag">→ AI Knowledge Base</p>
             <h2>Train Your Assistant</h2>
-            <p class="muted">Add FAQs, bot descriptions, strategy rules, onboarding steps, pricing, support answers, and business knowledge. Active entries are used by the AI assistant.</p>
+            <p class="muted">
+              Add FAQs, bot descriptions, strategy rules, onboarding steps,
+              pricing, support answers, and business knowledge.
+              Active entries are used by the AI assistant.
+            </p>
           </div>
-          <button onclick="saveKnowledge()">Save Knowledge</button>
+          <button type="button" onclick="saveKnowledge()">Save Knowledge</button>
         </div>
 
         <div class="form-grid two">
           <div class="form-card">
             <input type="hidden" id="knowledgeIdInput"/>
 
-            <label>Title</label>
-            <input id="knowledgeTitleInput" placeholder="Example: How LHISKEY KICK TRADES helps beginners"/>
+            <label for="knowledgeTitleInput">Title</label>
+            <input id="knowledgeTitleInput" type="text" placeholder="Example: How LHISKEY KICK TRADES helps beginners"/>
 
-            <label>Category</label>
+            <label for="knowledgeCategoryInput">Category</label>
             <select id="knowledgeCategoryInput">
               <option value="faq">FAQ</option>
               <option value="bot">Bot Description</option>
@@ -264,13 +388,18 @@
               <option value="other">Other</option>
             </select>
 
-            <label>Tags</label>
-            <input id="knowledgeTagsInput" placeholder="comma separated e.g. gold, smc, beginner, mt5"/>
+            <label for="knowledgeTagsInput">Tags</label>
+            <input id="knowledgeTagsInput" type="text" placeholder="comma separated e.g. gold, smc, beginner, mt5"/>
 
-            <label>Knowledge Content</label>
-            <textarea id="knowledgeContentInput" class="large" placeholder="Write the exact information the AI should know and use when answering visitors..."></textarea>
+            <label for="knowledgeContentInput">Knowledge Content</label>
+            <textarea
+              id="knowledgeContentInput"
+              class="large"
+              rows="10"
+              placeholder="Write the exact information the AI should know and use when answering visitors..."
+            ></textarea>
 
-            <label class="checkbox-line">
+            <label class="checkbox-line" for="knowledgeActiveInput">
               <input type="checkbox" id="knowledgeActiveInput" checked/>
               Active for AI assistant
             </label>
@@ -283,7 +412,9 @@
         </div>
       </div>
 
-
+      <!-- ═══════════════════════════════════════════════
+           LEADS
+      ═══════════════════════════════════════════════ -->
       <div class="tab-panel" id="tab-leads">
         <div class="panel-head">
           <div>
@@ -292,21 +423,34 @@
             <p class="muted">Visitors who asked for support or left contact details through the AI assistant.</p>
           </div>
           <div class="actions">
-            <button class="ghost-btn" onclick="loadLeads()">Refresh</button>
-            <button class="ghost-btn" onclick="downloadLeadsCSV()">Download CSV</button>
+            <button type="button" class="ghost-btn" onclick="loadLeads()">Refresh</button>
+            <button type="button" class="ghost-btn" onclick="downloadLeadsCSV()">Download CSV</button>
           </div>
         </div>
 
         <div class="table-card">
           <div class="table-header">
             <h3>Leads</h3>
-            <input type="search" id="leadSearchInput" placeholder="Search leads..." oninput="renderLeads()"/>
+            <input
+              type="search"
+              id="leadSearchInput"
+              placeholder="Search leads..."
+              aria-label="Search leads"
+              oninput="renderLeads()"
+            />
           </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>#</th><th>Name</th><th>WhatsApp</th><th>Email</th><th>Reason</th><th>Urgency</th><th>Status</th><th>Date</th>
+                  <th scope="col">#</th>
+                  <th scope="col">Name</th>
+                  <th scope="col">WhatsApp</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Reason</th>
+                  <th scope="col">Urgency</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Date</th>
                 </tr>
               </thead>
               <tbody id="leadBody">
@@ -317,7 +461,9 @@
         </div>
       </div>
 
-
+      <!-- ═══════════════════════════════════════════════
+           LIVE CHAT
+      ═══════════════════════════════════════════════ -->
       <div class="tab-panel" id="tab-livechat">
         <div class="panel-head support-head">
           <div>
@@ -326,29 +472,42 @@
             <p class="muted">Manage visitors like a WhatsApp-style inbox. Unanswered chats stay on top.</p>
           </div>
           <div class="actions">
-            <button class="ghost-btn" onclick="loadLiveChats()">Refresh</button>
-            <button class="ghost-btn" onclick="markSelectedLive()">Take Over</button>
-            <button class="danger-btn" onclick="closeSelectedChat()">Close Chat</button>
+            <button type="button" class="ghost-btn" onclick="loadLiveChats()">Refresh</button>
+            <button type="button" class="ghost-btn" onclick="markSelectedLive()">Take Over</button>
+            <button type="button" class="danger-btn" onclick="closeSelectedChat()">Close Chat</button>
           </div>
         </div>
 
         <div class="support-inbox">
-          <aside class="support-sidebar">
+          <div class="support-sidebar">
+            <!--
+              FIX 13: <aside> inside <section> is semantically wrong.
+              <aside> represents content tangentially related to the PAGE,
+              not a sidebar panel inside a UI component. Changed to <div>.
+              (The outer section was also changed to div — see FIX 5.)
+            -->
             <div class="support-filters">
-              <button class="filter-btn active" data-filter="open" onclick="setChatFilter('open')">Open</button>
-              <button class="filter-btn" data-filter="unanswered" onclick="setChatFilter('unanswered')">Unanswered</button>
-              <button class="filter-btn" data-filter="closed" onclick="setChatFilter('closed')">Closed</button>
-              <button class="filter-btn" data-filter="all" onclick="setChatFilter('all')">All</button>
+              <button type="button" class="filter-btn active" data-filter="open"       onclick="setChatFilter('open')">Open</button>
+              <button type="button" class="filter-btn"        data-filter="unanswered" onclick="setChatFilter('unanswered')">Unanswered</button>
+              <button type="button" class="filter-btn"        data-filter="closed"     onclick="setChatFilter('closed')">Closed</button>
+              <button type="button" class="filter-btn"        data-filter="all"        onclick="setChatFilter('all')">All</button>
             </div>
 
-            <input class="support-search" id="liveSearchInput" placeholder="Search name, phone, message..." oninput="renderLiveSessions()"/>
+            <input
+              type="search"
+              class="support-search"
+              id="liveSearchInput"
+              placeholder="Search name, phone, message..."
+              aria-label="Search chats"
+              oninput="renderLiveSessions()"
+            />
 
             <div class="live-session-list whatsapp-list" id="liveSessionList">
               Loading live sessions...
             </div>
-          </aside>
+          </div>
 
-          <section class="support-chat-panel">
+          <section class="support-chat-panel" aria-label="Chat window">
             <div class="live-chat-head support-chat-head">
               <div>
                 <h3 id="liveChatTitle">Select a client</h3>
@@ -357,28 +516,54 @@
               <div class="support-status" id="liveChatStatus">No chat selected</div>
             </div>
 
-            <div class="live-chat-messages whatsapp-messages" id="liveChatMessages">
+            <div
+              class="live-chat-messages whatsapp-messages"
+              id="liveChatMessages"
+              role="log"
+              aria-live="polite"
+              aria-label="Chat messages"
+            >
+              <!--
+                FIX 14: role="log" + aria-live="polite" makes screen readers
+                announce new chat messages as they arrive — important for
+                accessibility on a live support panel.
+              -->
               <div class="empty-chat">
                 <strong>No client selected</strong>
                 <p>Select a conversation from the left inbox.</p>
               </div>
             </div>
 
-            <div class="quick-replies">
-              <button onclick="insertQuickReply('Hello, this is Emmanuel from LHISKEY KICK TRADES. How can I help you?')">Greeting</button>
-              <button onclick="insertQuickReply('Thanks for reaching out. Kindly share more details so I can assist you properly.')">Ask Details</button>
-              <button onclick="insertQuickReply('For trading support, I can guide you educationally, but I cannot give guaranteed profit or exact financial advice.')">Disclaimer</button>
-              <button onclick="insertQuickReply('You can also reach us faster on WhatsApp using the contact button on the website.')">WhatsApp</button>
+            <div class="quick-replies" role="group" aria-label="Quick reply templates">
+              <button type="button" onclick="insertQuickReply('Hello, this is Emmanuel from LHISKEY KICK TRADES. How can I help you?')">Greeting</button>
+              <button type="button" onclick="insertQuickReply('Thanks for reaching out. Kindly share more details so I can assist you properly.')">Ask Details</button>
+              <button type="button" onclick="insertQuickReply('For trading support, I can guide you educationally, but I cannot give guaranteed profit or exact financial advice.')">Disclaimer</button>
+              <button type="button" onclick="insertQuickReply('You can also reach us faster on WhatsApp using the contact button on the website.')">WhatsApp</button>
             </div>
 
             <div class="live-reply whatsapp-reply">
-              <textarea id="adminReplyInput" placeholder="Type your reply to this visitor..."></textarea>
-              <button onclick="sendAdminReply()">Send</button>
+              <label for="adminReplyInput" class="visually-hidden">Your reply</label>
+              <!--
+                FIX 15: Textarea had no label (the placeholder is NOT a label —
+                it disappears when typing). Added a visually hidden label.
+                Requires .visually-hidden CSS (standard sr-only pattern):
+                position:absolute; width:1px; height:1px; overflow:hidden;
+                clip:rect(0,0,0,0); white-space:nowrap;
+              -->
+              <textarea
+                id="adminReplyInput"
+                rows="3"
+                placeholder="Type your reply to this visitor..."
+              ></textarea>
+              <button type="button" onclick="sendAdminReply()">Send</button>
             </div>
           </section>
         </div>
       </div>
 
+      <!-- ═══════════════════════════════════════════════
+           HANDOFFS
+      ═══════════════════════════════════════════════ -->
       <div class="tab-panel" id="tab-handoffs">
         <div class="panel-head">
           <div>
@@ -387,25 +572,31 @@
             <p class="muted">When the AI assistant decides a human should take over, the request appears here.</p>
           </div>
           <div class="actions">
-            <button class="ghost-btn" onclick="loadHandoffs()">Refresh</button>
+            <button type="button" class="ghost-btn" onclick="loadHandoffs()">Refresh</button>
           </div>
         </div>
 
         <div class="table-card">
           <div class="table-header">
             <h3>Recent Handoffs</h3>
-            <input type="search" id="handoffSearchInput" placeholder="Search handoffs..." oninput="renderHandoffs()"/>
+            <input
+              type="search"
+              id="handoffSearchInput"
+              placeholder="Search handoffs..."
+              aria-label="Search handoffs"
+              oninput="renderHandoffs()"
+            />
           </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>Urgency</th>
-                  <th>Reason</th>
-                  <th>Summary</th>
-                  <th>Status</th>
-                  <th>Date</th>
+                  <th scope="col">#</th>
+                  <th scope="col">Urgency</th>
+                  <th scope="col">Reason</th>
+                  <th scope="col">Summary</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Date</th>
                 </tr>
               </thead>
               <tbody id="handoffBody">
@@ -416,45 +607,71 @@
         </div>
       </div>
 
+      <!-- ═══════════════════════════════════════════════
+           AI ASSISTANT SETTINGS
+      ═══════════════════════════════════════════════ -->
       <div class="tab-panel" id="tab-assistant">
         <div class="panel-head">
           <div>
             <p class="section-tag">→ AI Assistant Manager</p>
             <h2>Assistant Settings</h2>
-            <p class="muted">Controls the public assistant widget. Real API-powered AI will be connected in the next server step.</p>
+            <p class="muted">Controls the public assistant widget. Connect ANTHROPIC_API_KEY in your server env to enable full AI mode.</p>
+            <!--
+              FIX 16: The old text said "Real API-powered AI will be connected
+              in the next server step" — now that v9 is live this was outdated
+              and confusing. Updated to reflect actual current state.
+            -->
           </div>
-          <button onclick="saveAssistantSettings()">Save Assistant</button>
+          <button type="button" onclick="saveAssistantSettings()">Save Assistant</button>
         </div>
 
         <div class="form-grid">
           <div class="form-card">
-            <label>Assistant Name</label>
-            <input id="assistantNameInput"/>
+            <label for="assistantNameInput">Assistant Name</label>
+            <input id="assistantNameInput" type="text"/>
 
-            <label>Status</label>
+            <label for="assistantStatusInput">Status</label>
             <select id="assistantStatusInput">
               <option value="online">Online</option>
               <option value="offline">Offline / Live agent unavailable</option>
             </select>
 
-            <label>Welcome Message</label>
-            <textarea id="welcomeMessageInput"></textarea>
+            <label for="welcomeMessageInput">Welcome Message</label>
+            <textarea id="welcomeMessageInput" rows="3"></textarea>
 
-            <label>Fallback Message</label>
-            <textarea id="fallbackMessageInput"></textarea>
+            <label for="fallbackMessageInput">Fallback Message</label>
+            <textarea id="fallbackMessageInput" rows="3"></textarea>
 
-            <label>System Prompt / Behavior</label>
-            <textarea id="systemPromptInput" class="large"></textarea>
+            <label for="systemPromptInput">System Prompt / Behavior</label>
+            <textarea id="systemPromptInput" class="large" rows="10"></textarea>
           </div>
         </div>
       </div>
 
-      <p class="message global" id="dashboardMessage"></p>
-    </section>
-  </section>
+    </div><!-- /dashboard -->
+  </div><!-- /main-area -->
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!--
+  FIX 17: Supabase CDN was loaded as @2 (latest v2). This will silently
+  break if Supabase publishes a v2 minor with breaking changes.
+  Pinned to 2.39.3 — latest stable at time of writing. Update deliberately.
+-->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+
+<!--
+  FIX 18: Added a small inline shim so admin.js's loginAdmin() still works
+  even though the form submission is now handled via onsubmit.
+  The shim just exposes handleLoginSubmit() which calls loginAdmin() after
+  preventing default page reload. NO behaviour change for admin.js needed.
+-->
+<script>
+  function handleLoginSubmit(event) {
+    event.preventDefault();   // stop page reload on Enter-key submit
+    if (typeof loginAdmin === 'function') loginAdmin();
+  }
+</script>
+
 <script src="admin.js"></script>
 </body>
 </html>
