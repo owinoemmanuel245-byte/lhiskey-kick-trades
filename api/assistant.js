@@ -77,7 +77,7 @@ export default async function handler(request, response) {
       });
 
       const reply =
-        `I should connect you with the LHISKEY KICK TRADES admin team for this. 🔄\n\n` +
+        `I understand — let me connect you with the LHISKEY KICK TRADES admin team. 🔄\n\n` +
         `Reason: ${handoff.reason}\n\n` +
         `Please share your name, WhatsApp number, email, and a short message in the form below. ` +
         `You can also keep this chat open — when admin replies, the response will appear here.`;
@@ -198,52 +198,168 @@ async function supabaseRest(path, options = {}) {
 }
 
 function decideIntent(message) {
-  const q = message.toLowerCase();
+  const q = normalizeIntentText(message);
+  const tokens = q.split(" ").filter(Boolean);
 
-  const exactSignal = [
+  const exactSignalPhrases = [
     "where should i enter", "where do i enter", "give me entry", "entry price",
-    "stop loss", "take profit", "tp", "sl", "buy now", "sell now",
-    "should i buy", "should i sell", "signal", "give signal", "trade for me"
+    "stop loss", "take profit", "give me tp", "give me sl", "buy now", "sell now",
+    "should i buy", "should i sell", "give signal", "trade for me",
+    "send signal", "gold signal", "forex signal", "xauusd signal"
   ];
 
-  const human = [
-    "human", "live agent", "agent", "support", "admin", "call me",
-    "talk to someone", "whatsapp me", "customer care", "help me personally"
+  const exactSignalWords = ["entry", "entries", "tp", "sl", "signal", "signals"];
+
+  const supportPhrases = [
+    "live agent", "real agent", "human agent", "talk to someone", "speak to someone",
+    "talk to a person", "speak to a person", "talk to human", "speak to human",
+    "connect me", "connect to admin", "connect to support", "customer care",
+    "live support", "human support", "support team", "admin support",
+    "i need help", "i want help", "help me", "call me", "whatsapp me",
+    "talk with someone", "speak with someone", "representative", "operator",
+    "nataka agent", "nataka admin", "nataka support", "nataka kuongea",
+    "naomba msaada", "ongea na mtu", "nisaidie", "msaada"
   ];
 
-  const accountIssue = [
-    "payment", "paid", "deposit", "withdraw", "withdrawal", "refund", "subscription",
-    "locked", "login", "verification", "account", "access", "not working", "bug", "error"
+  const supportVerbs = [
+    "want", "need", "talk", "speak", "connect", "chat", "contact", "call",
+    "reach", "help", "assist", "require", "request", "find", "link",
+    "nataka", "ongea", "nisaidie", "saidia", "naomba"
   ];
 
-  const frustration = [
-    "angry", "scam", "fake", "useless", "not responding", "bad service",
-    "i lost money", "you made me lose", "nonsense"
+  const humanWords = [
+    "agent", "agant", "egent", "human", "person", "someone", "somebody",
+    "admin", "support", "representative", "rep", "operator", "staff",
+    "customer", "care", "attendant", "assistant", "live", "mtu", "msaada"
   ];
 
-  if (containsAny(q, exactSignal)) {
+  const accountIssuePhrases = [
+    "payment issue", "i have paid", "i paid", "deposit issue", "withdrawal issue",
+    "refund", "subscription", "locked account", "cannot login", "cant login",
+    "verification", "access problem", "not working", "technical issue", "bug",
+    "error", "dashboard problem", "bot not working", "file not opening"
+  ];
+
+  const frustrationPhrases = [
+    "i am angry", "im angry", "angry", "scam", "fake", "useless", "not responding",
+    "bad service", "i lost money", "you made me lose", "nonsense", "waste of time",
+    "this is annoying", "i am tired", "im tired of this"
+  ];
+
+  const contactTerms = ["contact", "phone", "email", "mail", "whatsapp", "facebook", "instagram", "number", "call", "socials", "dm"];
+  const botTerms = ["bot", "bots", "ea", "expert advisor", "mt5", "mt4", "automation", "robot", "algo", "indicator", "software", "tool", "tools"];
+  const educationTerms = ["strategy", "setup", "smc", "ict", "liquidity", "order block", "fvg", "fair value gap", "market structure", "gold", "xauusd", "forex", "risk", "support and resistance", "supply", "demand", "candlestick"];
+  const aboutTerms = ["what is lhiskey", "lhiskey kick", "about lhiskey", "who are you", "what do you do", "what is this", "about the app", "about your platform"];
+
+  if (hasFlexiblePhrase(q, exactSignalPhrases) || hasTokenMatch(tokens, exactSignalWords, 1)) {
     return { type: "restricted_trade_advice", handoff: true, reason: "Visitor requested exact trade signal or personalized trading advice", urgency: "high" };
   }
 
-  if (containsAny(q, human)) {
-    return { type: "human_request", handoff: true, reason: "Visitor requested live human support", urgency: "medium" };
-  }
-
-  if (containsAny(q, accountIssue)) {
+  if (hasFlexiblePhrase(q, accountIssuePhrases)) {
     return { type: "account_or_technical_issue", handoff: true, reason: "Visitor has account, payment, access, or technical issue", urgency: "high" };
   }
 
-  if (containsAny(q, frustration)) {
+  if (hasFlexiblePhrase(q, frustrationPhrases)) {
     return { type: "frustration", handoff: true, reason: "Visitor appears frustrated and needs human support", urgency: "high" };
   }
 
-  if (containsAny(q, ["contact", "phone", "email", "whatsapp", "facebook", "instagram"])) return { type: "contact", handoff: false };
-  if (containsAny(q, ["bot", "ea", "expert advisor", "mt5", "automation", "robot"])) return { type: "bot_info", handoff: false };
-  if (containsAny(q, ["strategy", "setup", "smc", "ict", "liquidity", "order block", "fvg", "market structure", "gold", "xauusd", "forex", "risk"])) return { type: "education", handoff: false };
-  if (containsAny(q, ["what is lhiskey", "lhiskey kick", "about", "who are you", "what do you do"])) return { type: "about", handoff: false };
+  const phraseSupport = hasFlexiblePhrase(q, supportPhrases);
+  const hasHuman = hasTokenMatch(tokens, humanWords, 1);
+  const hasVerb = hasTokenMatch(tokens, supportVerbs, 1);
+  const asksQuestionSupport = q.includes("can i") || q.includes("could i") || q.includes("may i") || q.includes("please");
+
+  if (phraseSupport || (hasHuman && (hasVerb || asksQuestionSupport))) {
+    return { type: "human_request", handoff: true, reason: "Visitor requested live human support", urgency: "medium" };
+  }
+
+  if (hasFlexiblePhrase(q, contactTerms) || hasTokenMatch(tokens, contactTerms, 1)) return { type: "contact", handoff: false };
+  if (hasFlexiblePhrase(q, botTerms) || hasTokenMatch(tokens, botTerms, 1)) return { type: "bot_info", handoff: false };
+  if (hasFlexiblePhrase(q, educationTerms) || hasTokenMatch(tokens, educationTerms, 1)) return { type: "education", handoff: false };
+  if (hasFlexiblePhrase(q, aboutTerms)) return { type: "about", handoff: false };
 
   return { type: "general", handoff: false };
 }
+
+function normalizeIntentText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9+\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function hasFlexiblePhrase(text, phrases) {
+  return phrases.some((phrase) => {
+    const p = normalizeIntentText(phrase);
+    if (!p) return false;
+    if (text.includes(p)) return true;
+
+    const phraseTokens = p.split(" ").filter(Boolean);
+    const textTokens = text.split(" ").filter(Boolean);
+
+    if (phraseTokens.length === 1) return hasTokenMatch(textTokens, phraseTokens, 1);
+
+    let hits = 0;
+    for (const pt of phraseTokens) {
+      if (hasTokenMatch(textTokens, [pt], 1)) hits += 1;
+    }
+
+    return hits >= Math.max(2, Math.ceil(phraseTokens.length * 0.72));
+  });
+}
+
+function hasTokenMatch(tokens, dictionary, minHits = 1) {
+  let hits = 0;
+  for (const word of dictionary) {
+    const normalizedWord = normalizeIntentText(word);
+    if (!normalizedWord) continue;
+
+    if (normalizedWord.includes(" ")) {
+      const joined = tokens.join(" ");
+      if (hasFlexiblePhrase(joined, [normalizedWord])) hits += 1;
+    } else {
+      const matched = tokens.some((token) => tokenSimilar(token, normalizedWord));
+      if (matched) hits += 1;
+    }
+
+    if (hits >= minHits) return true;
+  }
+  return false;
+}
+
+function tokenSimilar(a, b) {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  if (a.length >= 4 && b.length >= 4 && (a.includes(b) || b.includes(a))) return true;
+
+  const maxLen = Math.max(a.length, b.length);
+  if (maxLen < 4) return false;
+
+  const dist = levenshtein(a, b);
+  if (maxLen <= 5) return dist <= 1;
+  if (maxLen <= 8) return dist <= 2;
+  return dist <= 3;
+}
+
+function levenshtein(a, b) {
+  const matrix = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
+  for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+  for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost
+      );
+    }
+  }
+  return matrix[a.length][b.length];
+}
+
 
 function buildReply({ message, decision, contacts, strategies, knowledgeItems }) {
   const knowledgeAnswer = answerFromKnowledge(knowledgeItems);
