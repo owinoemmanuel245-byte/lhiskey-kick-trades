@@ -342,7 +342,7 @@ async function sendAssistantMessage(){
 
     const result = await response.json();
 
-    if(!response.ok || !result.reply){
+    if(!response.ok || (!result.reply && !result.ack_only)){
       throw new Error(result.error || 'Assistant request failed');
     }
 
@@ -357,9 +357,14 @@ async function sendAssistantMessage(){
       localStorage.setItem('lhiskey_chat_last_id', String(liveChatLastMessageId));
     }
 
-    thinkingMessage.textContent = result.reply;
-    aiConversationHistory.push({ role:'assistant', content: result.reply });
-    aiConversationHistory = aiConversationHistory.slice(-10);
+    if(result.ack_only){
+      thinkingMessage.remove();
+      showMiniDeliveryStatus('Delivered to admin');
+    }else{
+      thinkingMessage.textContent = result.reply;
+      aiConversationHistory.push({ role:'assistant', content: result.reply });
+      aiConversationHistory = aiConversationHistory.slice(-10);
+    }
 
     if(result.handoff){
       addAssistantMessage('A handoff record has been created. Keep this chat open — admin replies will appear here.', 'bot');
@@ -607,3 +612,21 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   }, 500);
 });
+
+
+
+function showMiniDeliveryStatus(text){
+  const messages = document.getElementById('aiMessages');
+  if(!messages) return;
+
+  const div = document.createElement('div');
+  div.className = 'ai-delivery-status';
+  div.textContent = '✓ ' + text;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+
+  setTimeout(() => {
+    div.style.opacity = '0';
+    setTimeout(() => div.remove(), 500);
+  }, 1600);
+}

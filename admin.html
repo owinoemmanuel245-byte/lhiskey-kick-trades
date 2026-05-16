@@ -319,11 +319,11 @@
 
 
       <div class="tab-panel" id="tab-livechat">
-        <div class="panel-head">
+        <div class="panel-head support-head">
           <div>
-            <p class="section-tag">→ Live Agent Takeover</p>
-            <h2>Reply To Visitors</h2>
-            <p class="muted">When a visitor asks for a live agent, open the session here and reply directly inside their website chat widget.</p>
+            <p class="section-tag">→ Support Inbox</p>
+            <h2>Live Client Chats</h2>
+            <p class="muted">Manage visitors like a WhatsApp-style inbox. Unanswered chats stay on top.</p>
           </div>
           <div class="actions">
             <button class="ghost-btn" onclick="loadLiveChats()">Refresh</button>
@@ -332,28 +332,50 @@
           </div>
         </div>
 
-        <div class="live-chat-layout">
-          <div class="live-session-list" id="liveSessionList">
-            Loading live sessions...
-          </div>
+        <div class="support-inbox">
+          <aside class="support-sidebar">
+            <div class="support-filters">
+              <button class="filter-btn active" data-filter="open" onclick="setChatFilter('open')">Open</button>
+              <button class="filter-btn" data-filter="unanswered" onclick="setChatFilter('unanswered')">Unanswered</button>
+              <button class="filter-btn" data-filter="closed" onclick="setChatFilter('closed')">Closed</button>
+              <button class="filter-btn" data-filter="all" onclick="setChatFilter('all')">All</button>
+            </div>
 
-          <div class="live-chat-box">
-            <div class="live-chat-head">
+            <input class="support-search" id="liveSearchInput" placeholder="Search name, phone, message..." oninput="renderLiveSessions()"/>
+
+            <div class="live-session-list whatsapp-list" id="liveSessionList">
+              Loading live sessions...
+            </div>
+          </aside>
+
+          <section class="support-chat-panel">
+            <div class="live-chat-head support-chat-head">
               <div>
-                <h3 id="liveChatTitle">Select a chat</h3>
-                <p class="muted" id="liveChatMeta">Visitor messages and admin replies will appear here.</p>
+                <h3 id="liveChatTitle">Select a client</h3>
+                <p class="muted" id="liveChatMeta">Choose a visitor from the inbox to reply.</p>
+              </div>
+              <div class="support-status" id="liveChatStatus">No chat selected</div>
+            </div>
+
+            <div class="live-chat-messages whatsapp-messages" id="liveChatMessages">
+              <div class="empty-chat">
+                <strong>No client selected</strong>
+                <p>Select a conversation from the left inbox.</p>
               </div>
             </div>
 
-            <div class="live-chat-messages" id="liveChatMessages">
-              <p class="muted">No chat selected.</p>
+            <div class="quick-replies">
+              <button onclick="insertQuickReply('Hello, this is Emmanuel from LHISKEY KICK TRADES. How can I help you?')">Greeting</button>
+              <button onclick="insertQuickReply('Thanks for reaching out. Kindly share more details so I can assist you properly.')">Ask Details</button>
+              <button onclick="insertQuickReply('For trading support, I can guide you educationally, but I cannot give guaranteed profit or exact financial advice.')">Disclaimer</button>
+              <button onclick="insertQuickReply('You can also reach us faster on WhatsApp using the contact button on the website.')">WhatsApp</button>
             </div>
 
-            <div class="live-reply">
-              <textarea id="adminReplyInput" placeholder="Type your reply to the visitor..."></textarea>
+            <div class="live-reply whatsapp-reply">
+              <textarea id="adminReplyInput" placeholder="Type your reply to this visitor..."></textarea>
               <button onclick="sendAdminReply()">Send</button>
             </div>
-          </div>
+          </section>
         </div>
       </div>
 

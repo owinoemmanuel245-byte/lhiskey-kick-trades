@@ -15,6 +15,8 @@ let leadsData = [];
 let knowledgeData = [];
 let liveChatSessions = [];
 let selectedLiveSessionId = null;
+let liveChatMessagesCache = [];
+let currentChatFilter = 'open';
 let liveChatMessagesTimer = null;
 
 const loginPanel = document.getElementById('loginPanel');
@@ -667,24 +669,69 @@ function downloadLeadsCSV(){
 }
 
 
-/* LIVE AGENT CHAT */
+/* SUPPORT INBOX MODE */
 async function loadLiveChats(){
   const list = document.getElementById('liveSessionList');
   if(list) list.innerHTML = '<p class="muted">Loading sessions...</p>';
 
-  const { data, error } = await supabaseClient
+  const { data: sessions, error } = await supabaseClient
     .from('chat_sessions')
     .select('*')
-    .in('status', ['waiting_agent','live_agent','bot_mode','closed'])
     .order('updated_at', { ascending:false })
-    .limit(100);
+    .limit(200);
 
   if(error){
     if(list) list.innerHTML = '<p class="muted">Live chat tables not ready or access blocked.</p>';
     return;
   }
 
-  liveChatSessions = data || [];
+  liveChatSessions = sessions || [];
+
+  const { data: messages } = await supabaseClient
+    .from('chat_messages')
+    .select('*')
+    .order('id', { ascending:false })
+    .limit(500);
+
+  liveChatMessagesCache = messages || [];
+
+  enrichLiveSessions();
+  renderLiveSessions();
+
+  if(selectedLiveSessionId){
+    await loadLiveMessages();
+  }
+}
+
+function enrichLiveSessions(){
+  liveChatSessions = liveChatSessions.map(session => {
+    const msgs = liveChatMessagesCache
+      .filter(m => m.session_id === session.id)
+      .sort((a,b) => Number(b.id) - Number(a.id));
+
+    const latest = msgs[0] || null;
+    const latestAdmin = msgs.find(m => m.author_type === 'admin') || null;
+
+    const needsReply =
+      session.status !== 'closed' &&
+      latest &&
+      (latest.author_type === 'visitor' || latest.author_type === 'system') &&
+      (!latestAdmin || Number(latest.id) > Number(latestAdmin.id));
+
+    return { ...session, _latest: latest, _needsReply: !!needsReply };
+  });
+
+  liveChatSessions.sort((a,b) => {
+    if(a._needsReply !== b._needsReply) return a._needsReply ? -1 : 1;
+    return new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at);
+  });
+}
+
+function setChatFilter(filter){
+  currentChatFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+  const active = document.querySelector(`.filter-btn[data-filter="${filter}"]`);
+  if(active) active.classList.add('active');
   renderLiveSessions();
 }
 
@@ -692,19 +739,59 @@ function renderLiveSessions(){
   const list = document.getElementById('liveSessionList');
   if(!list) return;
 
-  if(liveChatSessions.length === 0){
-    list.innerHTML = '<p class="muted">No chat sessions yet.</p>';
+  const searchInput = document.getElementById('liveSearchInput');
+  const search = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+  let filtered = liveChatSessions.filter(session => {
+    if(currentChatFilter === 'open') return session.status !== 'closed';
+    if(currentChatFilter === 'unanswered') return session._needsReply;
+    if(currentChatFilter === 'closed') return session.status === 'closed';
+    return true;
+  });
+
+  if(search){
+    filtered = filtered.filter(session => {
+      const text = [
+        session.visitor_name,
+        session.visitor_whatsapp,
+        session.visitor_email,
+        session.status,
+        session.handoff_reason,
+        session._latest?.content
+      ].join(' ').toLowerCase();
+      return text.includes(search);
+    });
+  }
+
+  if(filtered.length === 0){
+    list.innerHTML = '<p class="muted">No chats in this view.</p>';
     return;
   }
 
-  list.innerHTML = liveChatSessions.map(session => `
-    <div class="live-session-item ${session.id === selectedLiveSessionId ? 'active' : ''}" onclick="selectLiveSession('${session.id}')">
-      <strong>${escapeHTML(session.visitor_name || session.visitor_label || 'Website Visitor')}</strong>
-      <span>Status: ${escapeHTML(session.status || '')}</span>
-      <span>WhatsApp: ${escapeHTML(session.visitor_whatsapp || 'Not provided')}</span>
-      <span>${formatDate(session.updated_at || session.created_at)}</span>
-    </div>
-  `).join('');
+  list.innerHTML = filtered.map(session => {
+    const name = session.visitor_name || session.visitor_label || 'Website Visitor';
+    const initials = getInitials(name);
+    const latestText = session._latest ? session._latest.content : 'No messages yet';
+    const time = formatShortTime(session._latest?.created_at || session.updated_at || session.created_at);
+    const statusClass = session.status === 'closed' ? 'closed' : session._needsReply ? 'unanswered' : session.status;
+
+    return `
+      <div class="wa-chat-card ${session.id === selectedLiveSessionId ? 'active' : ''} ${session._needsReply ? 'needs-reply' : ''}" onclick="selectLiveSession('${session.id}')">
+        <div class="wa-avatar">${escapeHTML(initials)}</div>
+        <div class="wa-chat-info">
+          <div class="wa-chat-top">
+            <strong>${escapeHTML(name)}</strong>
+            <span>${escapeHTML(time)}</span>
+          </div>
+          <div class="wa-chat-preview">${escapeHTML(latestText).slice(0, 80)}</div>
+          <div class="wa-chat-meta">
+            <span class="status-pill ${escapeHTML(statusClass)}">${session._needsReply ? 'UNANSWERED' : escapeHTML(session.status || 'bot_mode')}</span>
+            ${session.visitor_whatsapp ? `<span>${escapeHTML(session.visitor_whatsapp)}</span>` : '<span>No phone</span>'}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 async function selectLiveSession(sessionId){
@@ -713,17 +800,33 @@ async function selectLiveSession(sessionId){
   await loadLiveMessages();
 
   if(liveChatMessagesTimer) clearInterval(liveChatMessagesTimer);
-  liveChatMessagesTimer = setInterval(loadLiveMessages, 3500);
+  liveChatMessagesTimer = setInterval(async () => {
+    await loadLiveChats();
+    await loadLiveMessages();
+  }, 3500);
 }
 
 async function loadLiveMessages(){
   if(!selectedLiveSessionId) return;
 
-  const session = liveChatSessions.find(s => s.id === selectedLiveSessionId);
+  const { data: freshSession } = await supabaseClient
+    .from('chat_sessions')
+    .select('*')
+    .eq('id', selectedLiveSessionId)
+    .single();
+
+  const session = freshSession || liveChatSessions.find(s => s.id === selectedLiveSessionId);
 
   document.getElementById('liveChatTitle').textContent = session?.visitor_name || session?.visitor_label || 'Website Visitor';
   document.getElementById('liveChatMeta').textContent =
-    `Status: ${session?.status || 'unknown'} · WhatsApp: ${session?.visitor_whatsapp || 'Not provided'} · Email: ${session?.visitor_email || 'Not provided'}`;
+    `WhatsApp: ${session?.visitor_whatsapp || 'Not provided'} · Email: ${session?.visitor_email || 'Not provided'} · Started: ${formatDate(session?.created_at)}`;
+
+  const statusBox = document.getElementById('liveChatStatus');
+  if(statusBox){
+    const enriched = liveChatSessions.find(s => s.id === selectedLiveSessionId);
+    statusBox.textContent = enriched?._needsReply ? 'UNANSWERED' : (session?.status || 'unknown');
+    statusBox.className = 'support-status ' + (enriched?._needsReply ? 'unanswered' : (session?.status || ''));
+  }
 
   const { data, error } = await supabaseClient
     .from('chat_messages')
@@ -739,17 +842,22 @@ async function loadLiveMessages(){
   }
 
   if(!data || data.length === 0){
-    box.innerHTML = '<p class="muted">No messages yet.</p>';
+    box.innerHTML = '<div class="empty-chat"><strong>No messages yet</strong></div>';
     return;
   }
 
-  box.innerHTML = data.map(msg => `
-    <div class="live-msg ${escapeHTML(msg.author_type || 'system')}">
-      <strong>${labelAuthor(msg.author_type)}</strong><br/>
-      ${escapeHTML(msg.content || '')}
-      <br/><small>${formatDate(msg.created_at)}</small>
-    </div>
-  `).join('');
+  box.innerHTML = data.map(msg => {
+    const cls = msg.author_type || 'system';
+    return `
+      <div class="wa-message-row ${escapeHTML(cls)}">
+        <div class="wa-bubble ${escapeHTML(cls)}">
+          <div class="wa-label">${escapeHTML(labelAuthor(msg.author_type))}</div>
+          <div class="wa-text">${escapeHTML(msg.content || '')}</div>
+          <div class="wa-time">${formatShortTime(msg.created_at)}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
 
   box.scrollTop = box.scrollHeight;
 }
@@ -761,32 +869,25 @@ function labelAuthor(author){
   return 'System';
 }
 
+function insertQuickReply(text){
+  const input = document.getElementById('adminReplyInput');
+  if(!input) return;
+  input.value = text;
+  input.focus();
+}
+
 async function sendAdminReply(){
-  if(!selectedLiveSessionId){
-    showMessage('Select a chat first.', 'red');
-    return;
-  }
+  if(!selectedLiveSessionId) return showMessage('Select a client chat first.', 'red');
 
   const input = document.getElementById('adminReplyInput');
   const text = input.value.trim();
-
-  if(!text){
-    showMessage('Type a reply first.', 'red');
-    return;
-  }
+  if(!text) return showMessage('Type a reply first.', 'red');
 
   const { error } = await supabaseClient
     .from('chat_messages')
-    .insert([{
-      session_id: selectedLiveSessionId,
-      author_type: 'admin',
-      content: text
-    }]);
+    .insert([{ session_id: selectedLiveSessionId, author_type: 'admin', content: text }]);
 
-  if(error){
-    showMessage('Reply failed: ' + error.message, 'red');
-    return;
-  }
+  if(error) return showMessage('Reply failed: ' + error.message, 'red');
 
   await supabaseClient
     .from('chat_sessions')
@@ -800,7 +901,7 @@ async function sendAdminReply(){
 }
 
 async function markSelectedLive(){
-  if(!selectedLiveSessionId) return showMessage('Select a chat first.', 'red');
+  if(!selectedLiveSessionId) return showMessage('Select a client chat first.', 'red');
 
   const { error } = await supabaseClient
     .from('chat_sessions')
@@ -815,16 +916,12 @@ async function markSelectedLive(){
 }
 
 async function closeSelectedChat(){
-  if(!selectedLiveSessionId) return showMessage('Select a chat first.', 'red');
-  if(!confirm('Close this live chat?')) return;
+  if(!selectedLiveSessionId) return showMessage('Select a client chat first.', 'red');
+  if(!confirm('Close this client chat?')) return;
 
   await supabaseClient
     .from('chat_messages')
-    .insert([{
-      session_id: selectedLiveSessionId,
-      author_type: 'system',
-      content: 'Admin has closed this live chat. You can start a new support request anytime.'
-    }]);
+    .insert([{ session_id: selectedLiveSessionId, author_type: 'system', content: 'Admin has closed this live chat. You can start a new support request anytime.' }]);
 
   const { error } = await supabaseClient
     .from('chat_sessions')
@@ -836,6 +933,15 @@ async function closeSelectedChat(){
   await loadLiveChats();
   await loadLiveMessages();
   showMessage('Chat closed.', 'green');
+}
+
+function getInitials(name){
+  return String(name || 'V').split(' ').filter(Boolean).slice(0,2).map(w => w[0]?.toUpperCase()).join('') || 'V';
+}
+
+function formatShortTime(value){
+  if(!value) return '';
+  return new Date(value).toLocaleString('en-KE', { month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit' });
 }
 
 
