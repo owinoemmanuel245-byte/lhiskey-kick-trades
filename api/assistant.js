@@ -23,32 +23,37 @@ export default async function handler(request, response) {
     const userMessage = await insertChatMessage(session.id, "visitor", message);
 
     // If admin has already taken over or visitor is waiting, do not keep bot answering.
-    // If visitor has not submitted contact details yet, keep showing the lead form.
+    // Do not spam repeated system messages into the conversation.
     if (session.status === "live_agent" || session.status === "waiting_agent") {
       const missingDetails = !session.visitor_name || !session.visitor_whatsapp;
 
-      const reply = missingDetails
-        ? "Your support request is open. Please share your name, WhatsApp number, email, and a short message using the form below so admin can follow up properly."
-        : session.status === "live_agent"
-          ? "Your message has been sent to the live agent. Please wait for a reply in this chat."
-          : "Your message has been added to the support request. An admin can reply here when available.";
+      if (missingDetails) {
+        const reply = "Your support request is open. Please share your name, WhatsApp number, email, and a short message using the form below so admin can follow up properly.";
 
-      const botMsg = await insertChatMessage(session.id, "system", reply);
+        return response.status(200).json({
+          reply,
+          session_id: session.id,
+          status: session.status,
+          userMessageId: userMessage.id,
+          live_mode: true,
+          ack_only: false,
+          handoff: {
+            reason: session.handoff_reason || "Visitor requested live support",
+            urgency: "medium",
+            summary: "Existing support session is waiting for visitor contact details.",
+            request_details: true,
+            whatsapp: contacts.whatsapp1 || "+254113881279"
+          }
+        });
+      }
 
       return response.status(200).json({
-        reply,
+        reply: "",
         session_id: session.id,
         status: session.status,
         userMessageId: userMessage.id,
-        botMessageId: botMsg.id,
         live_mode: true,
-        handoff: missingDetails ? {
-          reason: session.handoff_reason || "Visitor requested live support",
-          urgency: "medium",
-          summary: "Existing support session is waiting for visitor contact details.",
-          request_details: true,
-          whatsapp: contacts.whatsapp1 || "+254113881279"
-        } : null
+        ack_only: true
       });
     }
 
