@@ -1276,3 +1276,19 @@
 .unlocked-content h4{color:var(--green);margin-bottom:8px}
 .hidden{display:none!important}
 @media(max-width:900px){.locked-products-grid{grid-template-columns:1fr}}
+
+
+/* ── ACCESS POLISH v14.1 ── */
+.unlock-success-head{border-bottom:1px solid #00ff8735;padding-bottom:14px;margin-bottom:16px}
+.unlock-success-head span{font-family:'DM Mono',monospace;color:var(--green);font-size:.72rem;letter-spacing:.18em}
+.unlock-success-head h3{margin-top:8px}
+.access-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+.access-summary-grid div{border:1px solid var(--border);background:var(--bg2);padding:12px}
+.access-summary-grid span{display:block;color:var(--muted);font-size:.74rem;margin-bottom:6px}
+.access-summary-grid strong{color:var(--text)}
+.access-instructions{border:1px solid #00ff8728;background:#00ff8708;padding:16px;margin:16px 0}
+.access-instructions h4{color:var(--green);margin-bottom:10px}
+.access-instructions ul{margin-left:18px;color:var(--muted);line-height:1.7;font-size:.86rem}
+.delivery-note-box{margin-top:14px;border-top:1px solid var(--border);padding-top:12px}
+.delivery-note-box strong{color:var(--green);display:block;margin-bottom:6px}
+@media(max-width:700px){.access-summary-grid{grid-template-columns:1fr}}

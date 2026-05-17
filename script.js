@@ -575,6 +575,26 @@ function startLockedProductAccess(productId, title){
   const paymentSection = document.getElementById('payments');
   if(paymentSection) paymentSection.scrollIntoView({ behavior:'smooth' });
 }
+
+function formatUnlockedHTML(value){
+  return safePublicHTML(String(value || '').trim()).replace(/\n/g, '<br>');
+}
+
+function buildUnlockedAccessInstructions(access){
+  const expiryText = access.expires_at ? new Date(access.expires_at).toLocaleString('en-KE') : 'No expiry set by admin.';
+  return `
+    <div class="access-instructions">
+      <h4>How to use this access</h4>
+      <ul>
+        <li>Use this access for your own approved package only.</li>
+        <li>Do not share your access code with another person or device.</li>
+        <li>Keep your WhatsApp number and code safe for future access.</li>
+        <li><strong>Expiry:</strong> ${safePublicHTML(expiryText)}</li>
+      </ul>
+    </div>
+  `;
+}
+
 async function checkClientAccess(){
   const msg = document.getElementById('clientAccessMsg');
   const box = document.getElementById('clientUnlockedBox');
@@ -593,14 +613,25 @@ async function checkClientAccess(){
     if(msg){ msg.style.color = 'var(--green)'; msg.textContent = 'Access unlocked successfully.'; }
     if(box){
       box.classList.remove('hidden');
-      box.innerHTML = `<h3>${safePublicHTML(access.product_title || 'Unlocked Access')}</h3>
-        <p><strong>Client:</strong> ${safePublicHTML(access.client_name || '')}</p>
-        <p><strong>Status:</strong> ${safePublicHTML(access.status || 'active')}</p>
-        ${access.expires_at ? `<p><strong>Expires:</strong> ${safePublicHTML(new Date(access.expires_at).toLocaleString('en-KE'))}</p>` : ''}
-        <div class="unlocked-content"><h4>Unlocked Content</h4><p>${safePublicHTML(access.private_content || 'Admin has activated your access. Follow the delivery notes below.')}</p>
-        ${access.private_link ? `<p><strong>Private Link:</strong> <a href="${safeAttr(access.private_link)}" target="_blank" rel="noopener noreferrer">Open private resource</a></p>` : ''}
-        ${access.delivery_notes ? `<p><strong>Delivery Notes:</strong> ${safePublicHTML(access.delivery_notes)}</p>` : ''}</div>
-        <div class="payment-warning">${safePublicHTML(access.disclaimer || 'Educational/testing access only. Not financial advice. No guaranteed profits.')}</div>`;
+      box.innerHTML = `
+        <div class="unlock-success-head">
+          <span>ACCESS ACTIVE</span>
+          <h3>${safePublicHTML(access.product_title || 'Unlocked Access')}</h3>
+        </div>
+        <div class="access-summary-grid">
+          <div><span>Client</span><strong>${safePublicHTML(access.client_name || '')}</strong></div>
+          <div><span>Status</span><strong>${safePublicHTML(access.status || 'active')}</strong></div>
+          <div><span>Access Type</span><strong>Private Release</strong></div>
+        </div>
+        ${buildUnlockedAccessInstructions(access)}
+        <div class="unlocked-content">
+          <h4>Unlocked Content</h4>
+          <p>${formatUnlockedHTML(access.private_content || 'Admin has activated your access. Follow the delivery notes below.')}</p>
+          ${access.private_link ? `<p><strong>Private Link:</strong> <a href="${safeAttr(access.private_link)}" target="_blank" rel="noopener noreferrer">Open private resource</a></p>` : ''}
+          ${access.delivery_notes ? `<div class="delivery-note-box"><strong>Delivery Notes</strong><p>${formatUnlockedHTML(access.delivery_notes)}</p></div>` : ''}
+        </div>
+        <div class="payment-warning">${safePublicHTML(access.disclaimer || 'Educational/testing access only. Not financial advice. No guaranteed profits.')}</div>
+      `;
     }
   }catch(err){ console.warn('Client access failed:', err); if(msg){ msg.style.color = 'var(--red)'; msg.textContent = err.message || 'Access denied. Contact admin.'; } }
 }

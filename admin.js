@@ -1255,7 +1255,7 @@ function renderClientAccessList(){
       <p>${escapeHTML(item.client_name || '')} · ${escapeHTML(item.whatsapp || '')}</p>
       <p>Code: <strong>${escapeHTML(item.access_code || '')}</strong> · Status: ${escapeHTML(item.status || 'active')} · Sharing attempts: ${Number(item.share_attempts || 0)}</p>
       <p>${item.expires_at ? 'Expires: ' + formatDate(item.expires_at) : 'No expiry'} · Last access: ${item.last_access_at ? formatDate(item.last_access_at) : 'Never'}</p>
-      <div class="mini-actions"><button class="ghost-btn" onclick="copyAccessCode('${escapeJS(item.access_code || '')}')">Copy Code</button><button class="ghost-btn" onclick="editClientAccess(${item.id})">Edit</button><button class="ghost-btn" onclick="resetClientAccessDevice(${item.id})">Reset Device</button><button class="ghost-btn" onclick="updateClientAccessStatus(${item.id}, 'active')">Activate</button><button class="mini-danger" onclick="updateClientAccessStatus(${item.id}, 'revoked')">Revoke</button></div>
+      <div class="mini-actions"><button class="ghost-btn" onclick="copyAccessCode('${escapeJS(item.access_code || '')}')">Copy Code</button><button class="ghost-btn" onclick="copyReleaseMessage(${item.id})">Copy Message</button><button class="ghost-btn" onclick="openAccessWhatsapp(${item.id})">WhatsApp</button><button class="ghost-btn" onclick="editClientAccess(${item.id})">Edit</button><button class="ghost-btn" onclick="resetClientAccessDevice(${item.id})">Reset Device</button><button class="ghost-btn" onclick="updateClientAccessStatus(${item.id}, 'active')">Activate</button><button class="mini-danger" onclick="updateClientAccessStatus(${item.id}, 'revoked')">Revoke</button></div>
     </div>`).join('');
 }
 function editClientAccess(id){
@@ -1288,7 +1288,7 @@ async function createClientAccessManual(){
   const result = id ? await supabaseClient.from('client_access').update(payload).eq('id', id) : await supabaseClient.from('client_access').insert([payload]);
   if(result.error){ showMessage('Client access save failed: ' + result.error.message, 'red'); return; }
   if(payload.payment_proof_id){ await supabaseClient.from('payment_proofs').update({ status:'verified', updated_at:new Date().toISOString() }).eq('id', payload.payment_proof_id); }
-  clearClientAccessForm(); await loadClientAccessAdmin(); if(typeof loadPaymentProofs === 'function') await loadPaymentProofs(); showMessage('Access released. Send the code to the client: ' + accessCode, 'green');
+  clearClientAccessForm(); await loadClientAccessAdmin(); if(typeof loadPaymentProofs === 'function') await loadPaymentProofs(); showMessage('Access released. Copy the release message or WhatsApp the client from Client Access.', 'green');
 }
 function clearClientAccessForm(){ ['clientAccessIdInput','clientAccessPaymentIdInput','clientAccessNameInput','clientAccessWhatsappInput','clientAccessEmailInput','clientAccessCodeInput','clientAccessPrivateInput','clientAccessLinkInput','clientAccessDeliveryInput','clientAccessExpiryInput'].forEach(id => setInputValue(id, '')); setInputValue('clientAccessStatusInput', 'active'); }
 function generateAccessCode(){ const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let code = 'LKT-'; for(let i=0;i<6;i++) code += chars[Math.floor(Math.random()*chars.length)]; return code; }
@@ -1296,6 +1296,40 @@ function generateAccessCodeIntoForm(){ setInputValue('clientAccessCodeInput', ge
 async function updateClientAccessStatus(id, status){ const { error } = await supabaseClient.from('client_access').update({ status, updated_at:new Date().toISOString() }).eq('id', id); if(error){ showMessage('Access status update failed: ' + error.message, 'red'); return; } await loadClientAccessRecords(); showMessage('Access status updated.', 'green'); }
 async function resetClientAccessDevice(id){ if(!confirm('Reset device binding for this client? Use this only if the real client changed device.')) return; const { error } = await supabaseClient.from('client_access').update({ device_hash:null, session_hash:null, share_attempts:0, status:'active', updated_at:new Date().toISOString() }).eq('id', id); if(error){ showMessage('Device reset failed: ' + error.message, 'red'); return; } await loadClientAccessRecords(); showMessage('Device binding reset. Client can activate again.', 'green'); }
 function copyAccessCode(code){ if(!code) return; navigator.clipboard?.writeText(code); showMessage('Access code copied: ' + code, 'green'); }
+
+function buildReleaseMessage(item){
+  const site = 'https://lhiskey-kick-trades.vercel.app/#client-access';
+  return [
+    `Hello ${item.client_name || 'there'}, your LHISKEY KICK TRADES access has been approved.`,
+    ``,
+    `Package: ${item.product_title || 'Private Access'}`,
+    `Access Code: ${item.access_code || ''}`,
+    `WhatsApp to use: ${item.whatsapp || ''}`,
+    ``,
+    `Open the Client Access Portal:`,
+    site,
+    ``,
+    `Important: This code is linked to one client/device only. Do not share it. Sharing attempts may block or revoke access.`,
+    ``,
+    `Educational/testing access only — not financial advice. No guaranteed profits.`
+  ].join('\n');
+}
+
+function copyReleaseMessage(id){
+  const item = clientAccessData.find(x => x.id === id);
+  if(!item){ showMessage('Access record not found.', 'red'); return; }
+  navigator.clipboard?.writeText(buildReleaseMessage(item));
+  showMessage('Release message copied. Send it to the client on WhatsApp.', 'green');
+}
+
+function openAccessWhatsapp(id){
+  const item = clientAccessData.find(x => x.id === id);
+  if(!item){ showMessage('Access record not found.', 'red'); return; }
+  const clean = String(item.whatsapp || '').replace(/[^\d]/g, '');
+  if(!clean){ showMessage('No WhatsApp number found.', 'red'); return; }
+  window.open(`https://wa.me/${clean}?text=${encodeURIComponent(buildReleaseMessage(item))}`, '_blank');
+}
+
 
 
 /* PAYMENT PROOFS v13 */
