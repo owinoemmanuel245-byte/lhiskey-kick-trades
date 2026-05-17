@@ -24,6 +24,8 @@ const pairs = [
 ];
 function buildTicker(){
   const t=document.getElementById('ticker');
+  if(!t) return;
+
   const all=[...pairs,...pairs];
   t.innerHTML=all.map(i=>`
     <span class="ticker-item">
@@ -33,11 +35,18 @@ function buildTicker(){
     </span>
   `).join('');
 }
-buildTicker();
+
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', buildTicker);
+}else{
+  buildTicker();
+}
 
 // ── LIVE PRICE WOBBLE
 function wobble(){
-  document.querySelectorAll('.ticker-price').forEach((el,i)=>{
+  const prices = document.querySelectorAll('.ticker-price');
+  if(!prices.length) return;
+  prices.forEach((el,i)=>{
     const base=parseFloat(el.textContent.replace(',',''));
     const delta=(Math.random()-.5)*0.002*base;
     const newVal=base+delta;
