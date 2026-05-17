@@ -18,6 +18,7 @@
     <li><a href="#why">Community</a></li>
     <li><a href="#risk">Risk</a></li>
     <li><a href="#join">Join</a></li>
+    <li><a href="#showcase">Showcase</a></li>
     <li><a href="#packages">Packages</a></li>
     <li><a href="#strategies">Strategies</a></li>
     <li><a href="#contact">Contact</a></li>
@@ -188,6 +189,83 @@
   </div>
 </section>
 
+
+
+<!-- SAFE SHOWCASE -->
+<section class="safe-showcase-section" id="showcase">
+  <p class="section-tag">→ Pre-Launch Lab</p>
+  <h2 class="section-title fade-up">Bots & Strategies Under Development</h2>
+  <p class="section-sub fade-up">
+    This is our safe showcase. Some bots, tools, and strategies are still in testing or research stage. Nothing here is a guaranteed-profit system, and untested tools are not released publicly.
+  </p>
+
+  <div class="showcase-grid" id="publicShowcaseItems">
+    <div class="showcase-card fade-up visible">
+      <span class="status-pill testing">Loading</span>
+      <h3>Loading showcase...</h3>
+      <p>Please wait while we load the current development roadmap.</p>
+    </div>
+  </div>
+</section>
+
+<!-- EARLY ACCESS REQUEST -->
+<section class="early-access-section" id="early-access">
+  <p class="section-tag">→ Early Access</p>
+  <h2 class="section-title fade-up">Request Info Without Risk</h2>
+  <p class="section-sub fade-up">
+    Join the waitlist or request information. We only release tools carefully after testing, risk review, and clear usage guidance.
+  </p>
+
+  <div class="early-access-card fade-up">
+    <div class="request-selected">
+      <span>Selected item</span>
+      <strong id="selectedShowcaseText">General Early Access</strong>
+    </div>
+
+    <input type="hidden" id="earlyShowcaseId"/>
+    <input type="hidden" id="earlyShowcaseTitle"/>
+
+    <div class="request-grid">
+      <div>
+        <label for="earlyNameInput">Name</label>
+        <input id="earlyNameInput" type="text" placeholder="Your name"/>
+      </div>
+      <div>
+        <label for="earlyWhatsappInput">WhatsApp</label>
+        <input id="earlyWhatsappInput" type="tel" placeholder="+254..."/>
+      </div>
+      <div>
+        <label for="earlyEmailInput">Email optional</label>
+        <input id="earlyEmailInput" type="email" placeholder="you@email.com"/>
+      </div>
+      <div>
+        <label for="earlyExperienceInput">Experience level</label>
+        <select id="earlyExperienceInput">
+          <option value="beginner">Beginner</option>
+          <option value="intermediate">Intermediate</option>
+          <option value="advanced">Advanced</option>
+          <option value="developer">Developer / bot tester</option>
+        </select>
+      </div>
+      <div>
+        <label for="earlyInterestInput">Interest type</label>
+        <select id="earlyInterestInput">
+          <option value="early_access">Early access</option>
+          <option value="testing_waitlist">Testing waitlist</option>
+          <option value="strategy_info">Strategy info</option>
+          <option value="bot_info">Bot/tool info</option>
+          <option value="general">General update</option>
+        </select>
+      </div>
+    </div>
+
+    <label for="earlyMessageInput">Message</label>
+    <textarea id="earlyMessageInput" rows="5" placeholder="Tell us what you want to know or why you want early access..."></textarea>
+
+    <button class="btn-primary request-btn" onclick="submitEarlyAccessRequest()">Send Early Access Request →</button>
+    <p class="nl-disclaimer" id="earlyAccessMsg">📊 Education/testing only — not financial advice. No guaranteed profits.</p>
+  </div>
+</section>
 
 <!-- PACKAGES -->
 <section class="packages-section" id="packages">

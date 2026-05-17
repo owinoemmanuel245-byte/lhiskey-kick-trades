@@ -415,3 +415,19 @@ td:nth-child(2){color:var(--text);}
   font-size:.7rem;
   padding:7px 9px;
 }
+
+
+
+/* ── SAFE SHOWCASE / EARLY ACCESS v12 ── */
+#tab-showcase .form-card select,
+#tab-earlyaccess .form-card select{
+  background:var(--bg2);
+  color:var(--text);
+  border:1px solid var(--border2);
+  padding:12px;
+}
+
+#tab-earlyaccess .table-wrap td,
+#tab-clientrequests .table-wrap td{
+  vertical-align:top;
+}

@@ -24,6 +24,8 @@
       <button type="button" class="tab" data-tab="contacts" onclick="switchTab('contacts')">Contacts</button>
       <button type="button" class="tab" data-tab="strategies" onclick="switchTab('strategies')">Strategies</button>
       <button type="button" class="tab" data-tab="packages" onclick="switchTab('packages')">Packages</button>
+      <button type="button" class="tab" data-tab="showcase" onclick="switchTab('showcase')">Safe Showcase</button>
+      <button type="button" class="tab" data-tab="earlyaccess" onclick="switchTab('earlyaccess')">Early Access</button>
       <button type="button" class="tab" data-tab="clientrequests" onclick="switchTab('clientrequests')">Client Requests</button>
       <button type="button" class="tab" data-tab="files" onclick="switchTab('files')">Bot Files</button>
       <button type="button" class="tab" data-tab="knowledge" onclick="switchTab('knowledge')">Knowledge Base</button>
@@ -292,6 +294,129 @@
               </thead>
               <tbody id="clientRequestBody">
                 <tr><td colspan="9">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+
+      
+      <!-- ═══════════════════════════════════════════════
+           SAFE SHOWCASE
+      ═══════════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-showcase">
+        <div class="panel-head">
+          <div>
+            <p class="section-tag">→ Safe Showcase</p>
+            <h2>Bot & Strategy Development Roadmap</h2>
+            <p class="muted">Show visitors what is being built without releasing untested bots or risky strategy rules.</p>
+          </div>
+          <button type="button" onclick="saveShowcaseItem()">Save Showcase Item</button>
+        </div>
+
+        <div class="form-grid two">
+          <div class="form-card">
+            <input type="hidden" id="showcaseIdInput"/>
+
+            <label>Title</label>
+            <input id="showcaseTitleInput" type="text" placeholder="Example: Gold Scalping Bot"/>
+
+            <label>Item Type</label>
+            <select id="showcaseTypeInput">
+              <option value="bot">Bot</option>
+              <option value="strategy">Strategy</option>
+              <option value="tool">Tool</option>
+              <option value="education">Education</option>
+              <option value="roadmap">Roadmap</option>
+            </select>
+
+            <label>Status</label>
+            <select id="showcaseStatusInput">
+              <option value="research">Research Stage</option>
+              <option value="testing">In Testing</option>
+              <option value="private_beta">Private Beta</option>
+              <option value="coming_soon">Coming Soon</option>
+              <option value="available_later">Available Later</option>
+              <option value="paused">Paused</option>
+            </select>
+
+            <label>Risk Level</label>
+            <select id="showcaseRiskInput">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+
+            <label>Short Description</label>
+            <textarea id="showcaseDescriptionInput" rows="4"></textarea>
+
+            <label>Testing Notes</label>
+            <textarea id="showcaseNotesInput" rows="4" placeholder="Example: Internal testing only. No public download yet."></textarea>
+
+            <label>Disclaimer</label>
+            <textarea id="showcaseDisclaimerInput" rows="3">For education/testing only. Not financial advice. No guaranteed profits.</textarea>
+
+            <label>CTA Button Label</label>
+            <input id="showcaseCtaInput" type="text" value="Request Early Access"/>
+
+            <label>Sort Order</label>
+            <input id="showcaseSortInput" type="number" value="100"/>
+
+            <label class="checkbox-line">
+              <input type="checkbox" id="showcasePublicInput" checked/>
+              Show on public website
+            </label>
+
+            <button type="button" class="ghost-btn" onclick="clearShowcaseForm()">Clear Form</button>
+          </div>
+
+          <div class="list-card">
+            <h3>Showcase Items</h3>
+            <div id="showcaseList" class="mini-list">Loading...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════
+           EARLY ACCESS
+      ═══════════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-earlyaccess">
+        <div class="panel-head">
+          <div>
+            <p class="section-tag">→ Early Access Requests</p>
+            <h2>Testing Waitlist & Info Requests</h2>
+            <p class="muted">Visitors requesting information about bots, strategies, tools, and private beta access.</p>
+          </div>
+          <div class="actions">
+            <button type="button" class="ghost-btn" onclick="loadEarlyAccessRequests()">Refresh</button>
+            <button type="button" class="ghost-btn" onclick="downloadEarlyAccessCSV()">Download CSV</button>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Early Access Requests</h3>
+            <input type="search" id="earlyAccessSearchInput" placeholder="Search early access..." oninput="renderEarlyAccessRequests()"/>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Visitor</th>
+                  <th>Item</th>
+                  <th>WhatsApp</th>
+                  <th>Experience</th>
+                  <th>Interest</th>
+                  <th>Status</th>
+                  <th>Message</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="earlyAccessBody">
+                <tr><td colspan="10">Loading...</td></tr>
               </tbody>
             </table>
           </div>

@@ -15,6 +15,8 @@ let leadsData = [];
 let knowledgeData = [];
 let packagesData = [];
 let clientRequestsData = [];
+let showcaseData = [];
+let earlyAccessData = [];
 let liveChatSessions = [];
 let selectedLiveSessionId = null;
 let liveChatMessagesCache = [];
@@ -103,6 +105,8 @@ async function bootstrapDashboard(){
     loadKnowledge(),
     loadPackages(),
     loadClientRequests(),
+    loadShowcaseItems(),
+    loadEarlyAccessRequests(),
     loadLeads(),
     loadLiveChats()
   ]);
@@ -121,6 +125,8 @@ function switchTab(name){
   if(name === 'livechat') loadLiveChats();
   if(name === 'packages') loadPackages();
   if(name === 'clientrequests') loadClientRequests();
+  if(name === 'showcase') loadShowcaseItems();
+  if(name === 'earlyaccess') loadEarlyAccessRequests();
 }
 
 /* WATCHLIST */
@@ -851,6 +857,277 @@ function downloadClientRequestsCSV(){
   const link = document.createElement('a');
   link.href = url;
   link.download = 'lhiskey-kick-trades-client-requests.csv';
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+
+
+/* SAFE SHOWCASE v12 */
+async function loadShowcaseItems(){
+  const list = document.getElementById('showcaseList');
+  if(list) list.innerHTML = '<p class="muted">Loading showcase items...</p>';
+
+  const { data, error } = await supabaseClient
+    .from('showcase_items')
+    .select('*')
+    .order('sort_order', { ascending:true })
+    .order('created_at', { ascending:false });
+
+  if(error){
+    if(list) list.innerHTML = '<p class="muted">Showcase table not ready or access blocked.</p>';
+    return;
+  }
+
+  showcaseData = data || [];
+  renderShowcaseItems();
+}
+
+function renderShowcaseItems(){
+  const list = document.getElementById('showcaseList');
+  if(!list) return;
+
+  if(showcaseData.length === 0){
+    list.innerHTML = '<p class="muted">No showcase items added yet.</p>';
+    return;
+  }
+
+  list.innerHTML = showcaseData.map(item => `
+    <div class="mini-item">
+      <h4>${escapeHTML(item.title || 'Untitled Item')}</h4>
+      <p>${escapeHTML(item.item_type || 'tool')} · ${escapeHTML(formatAdminShowcaseStatus(item.status))} · Risk: ${escapeHTML(item.risk_level || 'medium')} · ${item.is_public ? 'Public' : 'Hidden'}</p>
+      <p>${escapeHTML(String(item.short_description || '').slice(0, 160))}</p>
+      <div class="mini-actions">
+        <button class="ghost-btn" onclick="editShowcaseItem(${item.id})">Edit</button>
+        <button class="ghost-btn" onclick="toggleShowcasePublic(${item.id}, ${item.is_public ? 'false' : 'true'})">${item.is_public ? 'Hide' : 'Show'}</button>
+        <button class="mini-danger" onclick="deleteShowcaseItem(${item.id})">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function formatAdminShowcaseStatus(status){
+  const map = {
+    research:'Research Stage',
+    testing:'In Testing',
+    private_beta:'Private Beta',
+    coming_soon:'Coming Soon',
+    available_later:'Available Later',
+    paused:'Paused'
+  };
+  return map[status] || 'Coming Soon';
+}
+
+function editShowcaseItem(id){
+  const item = showcaseData.find(x => x.id === id);
+  if(!item) return;
+
+  document.getElementById('showcaseIdInput').value = item.id;
+  document.getElementById('showcaseTitleInput').value = item.title || '';
+  document.getElementById('showcaseTypeInput').value = item.item_type || 'tool';
+  document.getElementById('showcaseStatusInput').value = item.status || 'coming_soon';
+  document.getElementById('showcaseRiskInput').value = item.risk_level || 'medium';
+  document.getElementById('showcaseDescriptionInput').value = item.short_description || '';
+  document.getElementById('showcaseNotesInput').value = item.testing_notes || '';
+  document.getElementById('showcaseDisclaimerInput').value = item.disclaimer || 'For education/testing only. Not financial advice. No guaranteed profits.';
+  document.getElementById('showcaseCtaInput').value = item.cta_label || 'Request Early Access';
+  document.getElementById('showcaseSortInput').value = item.sort_order || 100;
+  document.getElementById('showcasePublicInput').checked = !!item.is_public;
+
+  showMessage('Showcase item loaded for editing.', 'green');
+}
+
+async function saveShowcaseItem(){
+  const id = document.getElementById('showcaseIdInput')?.value;
+  const title = document.getElementById('showcaseTitleInput')?.value.trim();
+  const description = document.getElementById('showcaseDescriptionInput')?.value.trim();
+
+  if(!title || !description){
+    showMessage('Title and short description are required.', 'red');
+    return;
+  }
+
+  const payload = {
+    title,
+    slug: slugify(title),
+    item_type: document.getElementById('showcaseTypeInput')?.value || 'tool',
+    status: document.getElementById('showcaseStatusInput')?.value || 'coming_soon',
+    risk_level: document.getElementById('showcaseRiskInput')?.value || 'medium',
+    short_description: description,
+    testing_notes: document.getElementById('showcaseNotesInput')?.value.trim() || '',
+    disclaimer: document.getElementById('showcaseDisclaimerInput')?.value.trim() || 'For education/testing only. Not financial advice. No guaranteed profits.',
+    cta_label: document.getElementById('showcaseCtaInput')?.value.trim() || 'Request Early Access',
+    sort_order: Number(document.getElementById('showcaseSortInput')?.value || 100),
+    is_public: !!document.getElementById('showcasePublicInput')?.checked,
+    updated_at: new Date().toISOString()
+  };
+
+  const result = id
+    ? await supabaseClient.from('showcase_items').update(payload).eq('id', id)
+    : await supabaseClient.from('showcase_items').insert([payload]);
+
+  if(result.error){
+    showMessage('Showcase save failed: ' + result.error.message, 'red');
+    return;
+  }
+
+  clearShowcaseForm();
+  await loadShowcaseItems();
+  showMessage('Showcase item saved successfully.', 'green');
+}
+
+function clearShowcaseForm(){
+  ['showcaseIdInput','showcaseTitleInput','showcaseDescriptionInput','showcaseNotesInput'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+
+  const type = document.getElementById('showcaseTypeInput');
+  const status = document.getElementById('showcaseStatusInput');
+  const risk = document.getElementById('showcaseRiskInput');
+  const disclaimer = document.getElementById('showcaseDisclaimerInput');
+  const cta = document.getElementById('showcaseCtaInput');
+  const sort = document.getElementById('showcaseSortInput');
+  const pub = document.getElementById('showcasePublicInput');
+
+  if(type) type.value = 'tool';
+  if(status) status.value = 'coming_soon';
+  if(risk) risk.value = 'medium';
+  if(disclaimer) disclaimer.value = 'For education/testing only. Not financial advice. No guaranteed profits.';
+  if(cta) cta.value = 'Request Early Access';
+  if(sort) sort.value = '100';
+  if(pub) pub.checked = true;
+}
+
+async function toggleShowcasePublic(id, status){
+  const { error } = await supabaseClient
+    .from('showcase_items')
+    .update({ is_public: !!status, updated_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if(error){
+    showMessage('Showcase visibility update failed: ' + error.message, 'red');
+    return;
+  }
+
+  await loadShowcaseItems();
+  showMessage('Showcase visibility updated.', 'green');
+}
+
+async function deleteShowcaseItem(id){
+  if(!confirm('Delete this showcase item?')) return;
+
+  const { error } = await supabaseClient
+    .from('showcase_items')
+    .delete()
+    .eq('id', id);
+
+  if(error){
+    showMessage('Showcase delete failed: ' + error.message, 'red');
+    return;
+  }
+
+  await loadShowcaseItems();
+  showMessage('Showcase item deleted.', 'green');
+}
+
+/* EARLY ACCESS REQUESTS v12 */
+async function loadEarlyAccessRequests(){
+  const body = document.getElementById('earlyAccessBody');
+  if(body) body.innerHTML = '<tr><td colspan="10">Loading...</td></tr>';
+
+  const { data, error } = await supabaseClient
+    .from('early_access_requests')
+    .select('*')
+    .order('created_at', { ascending:false })
+    .limit(300);
+
+  if(error){
+    if(body) body.innerHTML = '<tr><td colspan="10">Early access table not ready or access blocked.</td></tr>';
+    return;
+  }
+
+  earlyAccessData = data || [];
+  renderEarlyAccessRequests();
+}
+
+function renderEarlyAccessRequests(){
+  const body = document.getElementById('earlyAccessBody');
+  if(!body) return;
+
+  const search = (document.getElementById('earlyAccessSearchInput')?.value || '').trim().toLowerCase();
+
+  const filtered = earlyAccessData.filter(item =>
+    [
+      item.name, item.whatsapp, item.email, item.item_title,
+      item.experience_level, item.interest_type, item.status, item.message
+    ].join(' ').toLowerCase().includes(search)
+  );
+
+  if(filtered.length === 0){
+    body.innerHTML = '<tr><td colspan="10">No early access requests found.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = filtered.map((item, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td>${escapeHTML(item.name || '')}<br><small>${escapeHTML(item.email || '')}</small></td>
+      <td>${escapeHTML(item.item_title || 'General Early Access')}</td>
+      <td>${escapeHTML(item.whatsapp || '')}</td>
+      <td>${escapeHTML(item.experience_level || 'beginner')}</td>
+      <td>${escapeHTML(item.interest_type || 'early_access')}</td>
+      <td>${escapeHTML(item.status || 'new')}</td>
+      <td>${escapeHTML(String(item.message || '').slice(0, 130))}</td>
+      <td>${formatDate(item.created_at)}</td>
+      <td>
+        <div class="mini-actions">
+          <button class="ghost-btn" onclick="openClientWhatsapp('${escapeJS(item.whatsapp || '')}', '${escapeJS(item.name || '')}')">WhatsApp</button>
+          <button class="ghost-btn" onclick="updateEarlyAccessStatus(${item.id}, 'contacted')">Contacted</button>
+          <button class="ghost-btn" onclick="updateEarlyAccessStatus(${item.id}, 'waitlist')">Waitlist</button>
+          <button class="ghost-btn" onclick="updateEarlyAccessStatus(${item.id}, 'approved')">Approved</button>
+          <button class="mini-danger" onclick="updateEarlyAccessStatus(${item.id}, 'closed')">Close</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function updateEarlyAccessStatus(id, status){
+  const { error } = await supabaseClient
+    .from('early_access_requests')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if(error){
+    showMessage('Early access status failed: ' + error.message, 'red');
+    return;
+  }
+
+  await loadEarlyAccessRequests();
+  showMessage('Early access status updated.', 'green');
+}
+
+function downloadEarlyAccessCSV(){
+  if(!earlyAccessData || earlyAccessData.length === 0){
+    showMessage('No early access data to download.', 'red');
+    return;
+  }
+
+  const rows = [
+    ['id','name','whatsapp','email','item_title','experience_level','interest_type','status','message','created_at'],
+    ...earlyAccessData.map(i => [
+      i.id, i.name || '', i.whatsapp || '', i.email || '', i.item_title || '',
+      i.experience_level || '', i.interest_type || '', i.status || '', i.message || '', i.created_at || ''
+    ])
+  ];
+
+  const csv = rows.map(row => row.map(value => `"${String(value).replaceAll('"','""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'lhiskey-kick-trades-early-access.csv';
   link.click();
   URL.revokeObjectURL(url);
 }

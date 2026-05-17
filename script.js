@@ -116,6 +116,7 @@ document.getElementById('emailInput').addEventListener('keydown', function(event
 let cmsContacts = {};
 let publicStrategiesCache = [];
 let publicPackagesCache = [];
+let publicShowcaseCache = [];
 let assistantConfig = {
   assistant_name: 'LHISKEY AI Assistant',
   status: 'offline',
@@ -480,6 +481,7 @@ document.addEventListener('DOMContentLoaded', function(){
   loadCMSContent();
   loadPublishedStrategies();
   loadPublishedPackages();
+  loadPublicShowcase();
   loadAssistantSettings();
 
   const aiInput = document.getElementById('aiInput');
@@ -494,6 +496,185 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 
 
+
+
+
+/* ── SAFE BOT & STRATEGY SHOWCASE v12 ── */
+async function loadPublicShowcase(){
+  try{
+    const { data, error } = await supabaseClient
+      .from('showcase_items')
+      .select('id,title,item_type,status,risk_level,short_description,testing_notes,disclaimer,cta_label,sort_order')
+      .eq('is_public', true)
+      .order('sort_order', { ascending:true })
+      .order('created_at', { ascending:false })
+      .limit(12);
+
+    if(error){
+      console.warn('Showcase load error:', error.message);
+      renderPublicShowcase([]);
+      return;
+    }
+
+    publicShowcaseCache = data || [];
+    renderPublicShowcase(publicShowcaseCache);
+  }catch(err){
+    console.warn('Showcase failed:', err);
+    renderPublicShowcase([]);
+  }
+}
+
+function renderPublicShowcase(items){
+  const container = document.getElementById('publicShowcaseItems');
+  if(!container) return;
+
+  const fallback = [
+    {
+      id:'',
+      title:'Gold Scalping Bot',
+      item_type:'bot',
+      status:'testing',
+      risk_level:'high',
+      short_description:'A planned XAUUSD trading assistant under testing for risk control, session filters, spread awareness, and safer execution logic.',
+      testing_notes:'Not available for download. Internal testing only.',
+      disclaimer:'Education/testing only. Not financial advice. No guaranteed profits.',
+      cta_label:'Join Testing Waitlist'
+    },
+    {
+      id:'',
+      title:'SMC Liquidity Strategy',
+      item_type:'strategy',
+      status:'research',
+      risk_level:'medium',
+      short_description:'A research-stage strategy concept focused on liquidity sweeps, order blocks, FVGs, market structure, and risk-first planning.',
+      testing_notes:'Full rules are not public until testing is complete.',
+      disclaimer:'Education only. Not financial advice.',
+      cta_label:'Request Info'
+    }
+  ];
+
+  const list = items && items.length ? items : fallback;
+
+  container.innerHTML = list.map(item => {
+    const statusLabel = formatShowcaseStatus(item.status);
+    const typeLabel = String(item.item_type || 'tool').toUpperCase();
+    const riskLabel = String(item.risk_level || 'medium').toUpperCase();
+
+    return `
+      <div class="showcase-card fade-up visible">
+        <div class="showcase-top">
+          <span class="status-pill ${safeAttr(item.status || 'coming_soon')}">${safePublicHTML(statusLabel)}</span>
+          <strong>${safePublicHTML(typeLabel)}</strong>
+        </div>
+        <h3>${safePublicHTML(item.title || 'Showcase Item')}</h3>
+        <p>${safePublicHTML(item.short_description || '')}</p>
+        <div class="showcase-meta">
+          <span>Risk: ${safePublicHTML(riskLabel)}</span>
+          <span>${safePublicHTML(item.testing_notes || 'Testing notes pending.')}</span>
+        </div>
+        <div class="showcase-disclaimer">${safePublicHTML(item.disclaimer || 'For education/testing only. Not financial advice.')}</div>
+        <button class="btn-primary" onclick="selectEarlyAccess('${safeAttr(item.id || '')}', '${safeAttr(item.title || 'General Early Access')}', '${safeAttr(item.item_type || 'general')}')">
+          ${safePublicHTML(item.cta_label || 'Request Early Access')} →
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  document.querySelectorAll('.fade-up').forEach(el => {
+    if(typeof observer !== 'undefined') observer.observe(el);
+  });
+}
+
+function formatShowcaseStatus(status){
+  const map = {
+    research:'Research Stage',
+    testing:'In Testing',
+    private_beta:'Private Beta',
+    coming_soon:'Coming Soon',
+    available_later:'Available Later',
+    paused:'Paused'
+  };
+  return map[status] || 'Coming Soon';
+}
+
+function selectEarlyAccess(itemId, itemTitle, itemType){
+  const idInput = document.getElementById('earlyShowcaseId');
+  const titleInput = document.getElementById('earlyShowcaseTitle');
+  const selected = document.getElementById('selectedShowcaseText');
+  const interest = document.getElementById('earlyInterestInput');
+
+  if(idInput) idInput.value = itemId || '';
+  if(titleInput) titleInput.value = itemTitle || 'General Early Access';
+  if(selected) selected.textContent = itemTitle || 'General Early Access';
+
+  if(interest){
+    const t = String(itemType || '').toLowerCase();
+    if(t.includes('bot') || t.includes('tool')) interest.value = 'bot_info';
+    else if(t.includes('strategy')) interest.value = 'strategy_info';
+    else interest.value = 'early_access';
+  }
+
+  const section = document.getElementById('early-access');
+  if(section) section.scrollIntoView({ behavior:'smooth' });
+}
+
+async function submitEarlyAccessRequest(){
+  const msg = document.getElementById('earlyAccessMsg');
+
+  const payload = {
+    showcase_item_id: document.getElementById('earlyShowcaseId')?.value || null,
+    item_title: document.getElementById('earlyShowcaseTitle')?.value || 'General Early Access',
+    name: document.getElementById('earlyNameInput')?.value.trim(),
+    whatsapp: document.getElementById('earlyWhatsappInput')?.value.trim(),
+    email: document.getElementById('earlyEmailInput')?.value.trim(),
+    experience_level: document.getElementById('earlyExperienceInput')?.value || 'beginner',
+    interest_type: document.getElementById('earlyInterestInput')?.value || 'early_access',
+    message: document.getElementById('earlyMessageInput')?.value.trim()
+  };
+
+  if(!payload.name || !payload.whatsapp || !payload.message){
+    if(msg){
+      msg.style.color = 'var(--red)';
+      msg.textContent = 'Name, WhatsApp, and message are required.';
+    }
+    return;
+  }
+
+  if(msg){
+    msg.style.color = 'var(--muted)';
+    msg.textContent = 'Sending early access request...';
+  }
+
+  try{
+    const res = await fetch('/api/early-access', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await res.json();
+
+    if(!res.ok || !result.ok){
+      throw new Error(result.error || 'Request failed');
+    }
+
+    if(msg){
+      msg.style.color = 'var(--green)';
+      msg.textContent = 'Early access request sent. Admin will follow up.';
+    }
+
+    ['earlyNameInput','earlyWhatsappInput','earlyEmailInput','earlyMessageInput'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.value = '';
+    });
+  }catch(err){
+    console.warn('Early access request failed:', err);
+    if(msg){
+      msg.style.color = 'var(--red)';
+      msg.textContent = 'Could not send request. Please use WhatsApp or live chat.';
+    }
+  }
+}
 
 
 /* ── PUBLIC SERVICES / PACKAGES v11 ── */
