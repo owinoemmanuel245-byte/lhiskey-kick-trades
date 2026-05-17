@@ -443,6 +443,7 @@ function generateAssistantReply(question){
   const email = c.email || 'owinoemmanuel245@gmail.com';
 
   const has = (...words) => words.some(w => q.includes(w));
+  const nl2 = String.fromCharCode(10, 10);
 
   if(has('whatsapp','phone','contact','call')){
     return `You can contact LHISKEY KICK TRADES on WhatsApp: ${formatPhoneForDisplay(w1)} or email: ${email}.`;
@@ -453,78 +454,74 @@ function generateAssistantReply(question){
   }
 
   if(has('private beta')){
-    return `Private beta means a bot, strategy, tool, or assistant is being tested with limited access before public release. It does not mean the product is fully released or ready for live-account use. Pricing will be communicated soon when the beta structure and access terms are finalized.
-
-📊 Educational/testing purposes only — not financial advice.`;
+    return 'Private beta means a bot, strategy, tool, or assistant is being tested with limited access before public release. It does not mean the product is fully released or ready for live-account use. Pricing will be communicated soon when the beta structure and access terms are finalized.' + nl2 + '📊 Educational/testing purposes only — not financial advice.';
   }
 
   if(has('how much','price','pricing','cost','fee','fees','package','pack','packs','mentorship','mentor','consultation','consult','request access','smc pack','ict pack')){
     if(publicPackagesCache && publicPackagesCache.length > 0){
       const query = q;
       const scored = publicPackagesCache.map(pkg => {
-        const text = `${pkg.title || ''} ${pkg.category || ''} ${pkg.description || ''} ${(pkg.features || []).join(' ')}`.toLowerCase();
+        const featureText = Array.isArray(pkg.features) ? pkg.features.join(' ') : '';
+        const text = `${pkg.title || ''} ${pkg.category || ''} ${pkg.description || ''} ${featureText}`.toLowerCase();
         let score = 0;
+
         if(query.includes('smc') && text.includes('smc')) score += 10;
         if(query.includes('ict') && text.includes('ict')) score += 10;
         if(query.includes('bot') && (text.includes('bot') || text.includes('tool'))) score += 8;
         if(query.includes('consult') && text.includes('consult')) score += 8;
         if(query.includes('mentor') && (text.includes('mentor') || text.includes('beginner') || text.includes('smc'))) score += 6;
+
         return { pkg, score };
       }).sort((a,b) => b.score - a.score);
 
-      const selected = scored[0]?.score > 0 ? scored.slice(0,2).map(x => x.pkg) : publicPackagesCache.slice(0,4);
-      const list = selected.map((p,i) => `${i+1}. ${p.title} — ${p.price_label || 'Pricing will be communicated soon'}
-${p.description || ''}`).join('
+      const selected = scored[0]?.score > 0
+        ? scored.slice(0,2).map(x => x.pkg)
+        : publicPackagesCache.slice(0,4);
 
-');
-      return `Available LHISKEY KICK TRADES package/service information:
+      const list = selected
+        .map((p,i) => `${i+1}. ${p.title || 'Service Package'} — ${p.price_label || 'Pricing will be communicated soon'}${String.fromCharCode(10)}${p.description || ''}`)
+        .join(nl2);
 
-${list}
-
-Pricing will be communicated soon where not yet finalized. Use the Services/Packages form to request details.`;
+      return 'Available LHISKEY KICK TRADES package/service information:' + nl2 + list + nl2 + 'Pricing will be communicated soon where not yet finalized. Use the Services/Packages form to request details.';
     }
-    return `LHISKEY KICK TRADES package pricing will be communicated soon after services, access levels, and testing stages are finalized. Use the Services/Packages request form or ask for live support.`;
+
+    return 'LHISKEY KICK TRADES package pricing will be communicated soon after services, access levels, and testing stages are finalized. Use the Services/Packages request form or ask for live support.';
   }
 
   if(has('can i test','test the bot','testing waitlist','early access','gold scalping bot','bot available','public download','in testing')){
-    return `Bot testing at LHISKEY KICK TRADES is controlled carefully. Untested bots are not released publicly because trading automation can be risky without proper controls and forward testing. Visitors can request early access or join the testing waitlist, but approval is not automatic. Pricing will be communicated soon when the access structure is ready.
-
-📊 Educational/testing purposes only — not financial advice.`;
+    return 'Bot testing at LHISKEY KICK TRADES is controlled carefully. Untested bots are not released publicly because trading automation can be risky without proper controls and forward testing. Visitors can request early access or join the testing waitlist, but approval is not automatic. Pricing will be communicated soon when the access structure is ready.' + nl2 + '📊 Educational/testing purposes only — not financial advice.';
   }
 
   if(has('strategy','strategies','strategy library','strategy notes','strategy rules')){
     if(publicStrategiesCache && publicStrategiesCache.length > 0){
-      const titles = publicStrategiesCache.slice(0,4).map(s => `${s.title}${s.timeframe ? ' (' + s.timeframe + ')' : ''}`).join(', ');
-      return `Published strategy notes currently include: ${titles}. These are educational notes, not personal trade signals.
+      const titles = publicStrategiesCache
+        .slice(0,4)
+        .map(s => `${s.title}${s.timeframe ? ' (' + s.timeframe + ')' : ''}`)
+        .join(', ');
 
-📊 Educational purposes only — not financial advice.`;
+      return `Published strategy notes currently include: ${titles}. These are educational notes, not personal trade signals.` + nl2 + '📊 Educational purposes only — not financial advice.';
     }
-    return `LHISKEY KICK TRADES has not fully published public strategy notes yet. Strategies will be shared only after review and testing so visitors do not blindly copy risky rules.`;
+
+    return 'LHISKEY KICK TRADES has not fully published public strategy notes yet. Strategies will be shared only after review and testing so visitors do not blindly copy risky rules.';
   }
 
   if(has('what is forex','forex meaning') || q.trim() === 'forex'){
-    return `Forex, also called foreign exchange, is the global market where currencies are bought and sold. Traders study pairs like EUR/USD, GBP/USD, USD/JPY, and XAU/USD. Price moves because of supply and demand, interest rates, liquidity, news, and market sentiment. Beginners should learn market structure and risk management before chasing profits.
-
-📊 Educational purposes only — not financial advice.`;
+    return 'Forex, also called foreign exchange, is the global market where currencies are bought and sold. Traders study pairs like EUR/USD, GBP/USD, USD/JPY, and XAU/USD. Price moves because of supply and demand, interest rates, liquidity, news, and market sentiment. Beginners should learn market structure and risk management before chasing profits.' + nl2 + '📊 Educational purposes only — not financial advice.';
   }
 
   if(has('smc','ict','liquidity','order block','fvg','fair value gap','market structure')){
-    return `SMC/ICT is a way of studying price action through liquidity, market structure, order blocks, fair value gaps, BOS, CHoCH, supply and demand, and risk-first trade planning. It is education, not a guaranteed signal system.
-
-📊 Educational purposes only — not financial advice.`;
+    return 'SMC/ICT is a way of studying price action through liquidity, market structure, order blocks, fair value gaps, BOS, CHoCH, supply and demand, and risk-first trade planning. It is education, not a guaranteed signal system.' + nl2 + '📊 Educational purposes only — not financial advice.';
   }
 
   if(has('gold','xau','trade','risk')){
-    return `LHISKEY KICK TRADES focuses on price action, market structure, liquidity, supply and demand, and risk-first trading. We do not promise guaranteed profits. Always manage risk before entering any trade.
-
-📊 Educational purposes only — not financial advice.`;
+    return 'LHISKEY KICK TRADES focuses on price action, market structure, liquidity, supply and demand, and risk-first trading. We do not promise guaranteed profits. Always manage risk before entering any trade.' + nl2 + '📊 Educational purposes only — not financial advice.';
   }
 
   if(has('live agent','agent','admin','human','support')){
     return assistantConfig.fallback_message + ` You can also reach us on WhatsApp: ${formatPhoneForDisplay(w1)}.`;
   }
 
-  return `I can help with forex education, LHISKEY KICK TRADES platform information, packages, safe showcase items, strategy notes, bot/tool information, and support routing.`;
+  return 'I can help with forex education, LHISKEY KICK TRADES platform information, packages, safe showcase items, strategy notes, bot/tool information, and support routing.';
 }
 
 document.addEventListener('DOMContentLoaded' , function(){
