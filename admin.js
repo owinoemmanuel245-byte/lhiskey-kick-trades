@@ -109,6 +109,7 @@ async function bootstrapDashboard(){
     loadFiles(),
     loadAssistantSettings(),
     loadHandoffs(),
+    ensureKnowledgeCategories(),
     loadKnowledge(),
     loadPackages(),
     loadClientRequests(),
@@ -2221,3 +2222,40 @@ document.getElementById('adminPassword').addEventListener('keydown', function(ev
 });
 
 checkSession();
+
+
+
+/* KNOWLEDGE CATEGORY OPTIONS v15.4 */
+const KNOWLEDGE_CATEGORY_OPTIONS_V15_4 = [
+  ['faq', 'FAQ / General Questions'],
+  ['about', 'About LHISKEY KICK TRADES'],
+  ['education', 'Forex Education'],
+  ['risk', 'Risk Management'],
+  ['psychology', 'Trading Psychology'],
+  ['strategy', 'Strategies / SMC / ICT'],
+  ['bot', 'Bots / Tools / Automation'],
+  ['payments', 'Payments / M-Pesa / Bank'],
+  ['access', 'Access Codes / Locked Products'],
+  ['policy', 'Policies / Terms / Refunds'],
+  ['pricing', 'Pricing / Packages / Quotes'],
+  ['support', 'Support / Live Agent'],
+  ['products', 'Locked Products / Private Content'],
+  ['showcase', 'Safe Showcase / Roadmap'],
+  ['private_beta', 'Private Beta / Testing'],
+  ['market', 'Market Data / Ticker / Sessions'],
+  ['other', 'Other']
+];
+
+function ensureKnowledgeCategories(){
+  const select = document.getElementById('knowledgeCategoryInput');
+  if(!select) return;
+
+  const existingValues = Array.from(select.options).map(o => o.value);
+  const missing = KNOWLEDGE_CATEGORY_OPTIONS_V15_4.filter(([value]) => !existingValues.includes(value));
+
+  if(missing.length === 0) return;
+
+  select.innerHTML = KNOWLEDGE_CATEGORY_OPTIONS_V15_4
+    .map(([value, label]) => `<option value="${value}">${label}</option>`)
+    .join('');
+}
