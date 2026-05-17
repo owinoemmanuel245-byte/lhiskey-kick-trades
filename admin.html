@@ -28,6 +28,8 @@
       <button type="button" class="tab" data-tab="earlyaccess" onclick="switchTab('earlyaccess')">Early Access</button>
       <button type="button" class="tab" data-tab="clientrequests" onclick="switchTab('clientrequests')">Client Requests</button>
       <button type="button" class="tab" data-tab="payments" onclick="switchTab('payments')">Payments</button>
+      <button type="button" class="tab" data-tab="lockedproducts" onclick="switchTab('lockedproducts')">Locked Products</button>
+      <button type="button" class="tab" data-tab="clientaccess" onclick="switchTab('clientaccess')">Client Access</button>
       <button type="button" class="tab" data-tab="files" onclick="switchTab('files')">Bot Files</button>
       <button type="button" class="tab" data-tab="knowledge" onclick="switchTab('knowledge')">Knowledge Base</button>
       <button type="button" class="tab" data-tab="leads" onclick="switchTab('leads')">Leads</button>
@@ -506,6 +508,54 @@
         </div>
       </div>
 
+
+      
+      <div class="tab-panel" id="tab-lockedproducts">
+        <div class="panel-head"><div><p class="section-tag">→ Locked Products</p><h2>Preview Products & Locked Private Content</h2><p class="muted">Public sees preview only. Private content unlocks only after payment approval and access release.</p></div><button type="button" onclick="saveLockedProduct()">Save Product</button></div>
+        <div class="form-grid two">
+          <div class="form-card">
+            <input type="hidden" id="lockedProductIdInput"/>
+            <label>Title</label><input id="lockedProductTitleInput" type="text"/>
+            <label>Product Type</label><select id="lockedProductTypeInput"><option value="package">Package</option><option value="bot">Bot</option><option value="strategy">Strategy</option><option value="course">Course</option><option value="tool">Tool</option><option value="consultation">Consultation</option><option value="custom">Custom</option></select>
+            <label>Status</label><select id="lockedProductStatusInput"><option value="draft">Draft</option><option value="preview">Preview Only</option><option value="locked">Locked</option><option value="available">Payment Required</option><option value="paused">Paused</option></select>
+            <label>Price Label</label><input id="lockedProductPriceInput" type="text" value="Pricing will be communicated soon"/>
+            <label>Short Description</label><textarea id="lockedProductDescriptionInput" rows="4"></textarea>
+            <label>Preview Content</label><textarea id="lockedProductPreviewInput" rows="4"></textarea>
+            <label>Private Content</label><textarea id="lockedProductPrivateInput" rows="6"></textarea>
+            <label>Private Link optional</label><input id="lockedProductLinkInput" type="text"/>
+            <label>Delivery Notes</label><textarea id="lockedProductDeliveryInput" rows="4"></textarea>
+            <label>Access Duration Days optional</label><input id="lockedProductDurationInput" type="number" min="1"/>
+            <label>Risk Level</label><select id="lockedProductRiskInput"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select>
+            <label>CTA Label</label><input id="lockedProductCtaInput" type="text" value="Access Package"/>
+            <label>Disclaimer</label><textarea id="lockedProductDisclaimerInput" rows="3">Educational/testing access only. Not financial advice. No guaranteed profits.</textarea>
+            <label>Sort Order</label><input id="lockedProductSortInput" type="number" value="100"/>
+            <label class="checkbox-line"><input type="checkbox" id="lockedProductPublicInput" checked/> Show public preview</label>
+            <button type="button" class="ghost-btn" onclick="clearLockedProductForm()">Clear Form</button>
+          </div>
+          <div class="list-card"><h3>Locked Products</h3><div id="lockedProductList" class="mini-list">Loading...</div></div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-clientaccess">
+        <div class="panel-head"><div><p class="section-tag">→ Client Access</p><h2>Release Packages & Monitor Sharing</h2><p class="muted">Create one-client access codes after payment approval.</p></div><div class="actions"><button type="button" class="ghost-btn" onclick="loadClientAccessAdmin()">Refresh</button><button type="button" onclick="createClientAccessManual()">Create Access</button></div></div>
+        <div class="form-grid two">
+          <div class="form-card">
+            <h3>Release Access</h3>
+            <input type="hidden" id="clientAccessIdInput"/><input type="hidden" id="clientAccessPaymentIdInput"/>
+            <label>Client Name</label><input id="clientAccessNameInput" type="text"/>
+            <label>WhatsApp</label><input id="clientAccessWhatsappInput" type="text"/>
+            <label>Email optional</label><input id="clientAccessEmailInput" type="email"/>
+            <label>Product to Release</label><select id="clientAccessProductInput"></select>
+            <label>Access Code</label><div class="inline-action"><input id="clientAccessCodeInput" type="text"/><button type="button" class="ghost-btn" onclick="generateAccessCodeIntoForm()">Generate</button></div>
+            <label>Private Content Override optional</label><textarea id="clientAccessPrivateInput" rows="4"></textarea>
+            <label>Private Link Override optional</label><input id="clientAccessLinkInput" type="text"/>
+            <label>Delivery Notes Override optional</label><textarea id="clientAccessDeliveryInput" rows="3"></textarea>
+            <label>Expiry Date optional</label><input id="clientAccessExpiryInput" type="datetime-local"/>
+            <label>Status</label><select id="clientAccessStatusInput"><option value="active">Active</option><option value="pending">Pending</option><option value="completed">Completed</option><option value="expired">Expired</option><option value="revoked">Revoked</option><option value="shared_attempt_detected">Shared Attempt Detected</option></select>
+          </div>
+          <div class="list-card"><h3>Access Records</h3><input type="search" id="clientAccessSearchInput" placeholder="Search access..." oninput="renderClientAccessList()"/><div id="clientAccessList" class="mini-list">Loading...</div></div>
+        </div>
+      </div>
 
       <div class="tab-panel" id="tab-files">
         <div class="panel-head">

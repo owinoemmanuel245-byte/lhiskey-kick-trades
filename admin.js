@@ -19,6 +19,9 @@ let showcaseData = [];
 let earlyAccessData = [];
 let paymentProofsData = [];
 let paymentSettingsData = {};
+let lockedProductsData = [];
+let clientAccessData = [];
+let accessLogsData = [];
 let liveChatSessions = [];
 let selectedLiveSessionId = null;
 let liveChatMessagesCache = [];
@@ -110,6 +113,8 @@ async function bootstrapDashboard(){
     loadShowcaseItems(),
     loadEarlyAccessRequests(),
     loadPaymentsAdmin(),
+    loadLockedProductsAdmin(),
+    loadClientAccessAdmin(),
     loadLeads(),
     loadLiveChats()
   ]);
@@ -131,6 +136,8 @@ function switchTab(name){
   if(name === 'showcase') loadShowcaseItems();
   if(name === 'earlyaccess') loadEarlyAccessRequests();
   if(name === 'payments') loadPaymentsAdmin();
+  if(name === 'lockedproducts') loadLockedProductsAdmin();
+  if(name === 'clientaccess') loadClientAccessAdmin();
 }
 
 /* WATCHLIST */
@@ -1138,6 +1145,159 @@ function downloadEarlyAccessCSV(){
 
 
 
+
+/* LOCKED PRODUCTS + CLIENT ACCESS v14 */
+async function loadLockedProductsAdmin(){
+  const list = document.getElementById('lockedProductList');
+  if(list) list.innerHTML = '<p class="muted">Loading locked products...</p>';
+  const { data, error } = await supabaseClient.from('locked_products').select('*').order('sort_order', { ascending:true }).order('created_at', { ascending:false });
+  if(error){ if(list) list.innerHTML = '<p class="muted">Locked products table not ready or access blocked.</p>'; return; }
+  lockedProductsData = data || [];
+  renderLockedProductsAdmin();
+  fillClientAccessProductOptions();
+}
+function renderLockedProductsAdmin(){
+  const list = document.getElementById('lockedProductList');
+  if(!list) return;
+  if(!lockedProductsData.length){ list.innerHTML = '<p class="muted">No locked products added yet.</p>'; return; }
+  list.innerHTML = lockedProductsData.map(item => `
+    <div class="mini-item">
+      <h4>${escapeHTML(item.title || 'Untitled Product')}</h4>
+      <p>${escapeHTML(item.product_type || 'package')} · ${escapeHTML(item.status || 'locked')} · Risk: ${escapeHTML(item.risk_level || 'medium')} · ${item.is_public ? 'Public preview' : 'Hidden'}</p>
+      <p>${escapeHTML(String(item.short_description || '').slice(0, 160))}</p>
+      <div class="mini-actions"><button class="ghost-btn" onclick="editLockedProduct(${item.id})">Edit</button><button class="ghost-btn" onclick="toggleLockedProductPublic(${item.id}, ${item.is_public ? 'false' : 'true'})">${item.is_public ? 'Hide' : 'Show'}</button><button class="mini-danger" onclick="deleteLockedProduct(${item.id})">Delete</button></div>
+    </div>`).join('');
+}
+function editLockedProduct(id){
+  const item = lockedProductsData.find(x => x.id === id); if(!item) return;
+  setInputValue('lockedProductIdInput', item.id);
+  setInputValue('lockedProductTitleInput', item.title || '');
+  setInputValue('lockedProductTypeInput', item.product_type || 'package');
+  setInputValue('lockedProductStatusInput', item.status || 'locked');
+  setInputValue('lockedProductPriceInput', item.price_label || 'Pricing will be communicated soon');
+  setInputValue('lockedProductDescriptionInput', item.short_description || '');
+  setInputValue('lockedProductPreviewInput', item.preview_content || '');
+  setInputValue('lockedProductPrivateInput', item.private_content || '');
+  setInputValue('lockedProductLinkInput', item.private_link || '');
+  setInputValue('lockedProductDeliveryInput', item.delivery_notes || '');
+  setInputValue('lockedProductDurationInput', item.access_duration_days || '');
+  setInputValue('lockedProductRiskInput', item.risk_level || 'medium');
+  setInputValue('lockedProductCtaInput', item.cta_label || 'Access Package');
+  setInputValue('lockedProductDisclaimerInput', item.disclaimer || 'Educational/testing access only. Not financial advice. No guaranteed profits.');
+  setInputValue('lockedProductSortInput', item.sort_order || 100);
+  const pub = document.getElementById('lockedProductPublicInput'); if(pub) pub.checked = !!item.is_public;
+  showMessage('Locked product loaded for editing.', 'green');
+}
+async function saveLockedProduct(){
+  const id = document.getElementById('lockedProductIdInput')?.value;
+  const title = document.getElementById('lockedProductTitleInput')?.value.trim();
+  const short_description = document.getElementById('lockedProductDescriptionInput')?.value.trim();
+  if(!title || !short_description){ showMessage('Product title and short description are required.', 'red'); return; }
+  const durationRaw = document.getElementById('lockedProductDurationInput')?.value;
+  const payload = {
+    title, slug: slugify(title), product_type: document.getElementById('lockedProductTypeInput')?.value || 'package',
+    status: document.getElementById('lockedProductStatusInput')?.value || 'locked',
+    price_label: document.getElementById('lockedProductPriceInput')?.value.trim() || 'Pricing will be communicated soon',
+    short_description, preview_content: document.getElementById('lockedProductPreviewInput')?.value.trim() || '',
+    private_content: document.getElementById('lockedProductPrivateInput')?.value.trim() || '',
+    private_link: document.getElementById('lockedProductLinkInput')?.value.trim() || '',
+    delivery_notes: document.getElementById('lockedProductDeliveryInput')?.value.trim() || '',
+    access_duration_days: durationRaw ? Number(durationRaw) : null,
+    risk_level: document.getElementById('lockedProductRiskInput')?.value || 'medium',
+    cta_label: document.getElementById('lockedProductCtaInput')?.value.trim() || 'Access Package',
+    disclaimer: document.getElementById('lockedProductDisclaimerInput')?.value.trim() || 'Educational/testing access only. Not financial advice. No guaranteed profits.',
+    sort_order: Number(document.getElementById('lockedProductSortInput')?.value || 100),
+    is_public: !!document.getElementById('lockedProductPublicInput')?.checked,
+    updated_at: new Date().toISOString()
+  };
+  const result = id ? await supabaseClient.from('locked_products').update(payload).eq('id', id) : await supabaseClient.from('locked_products').insert([payload]);
+  if(result.error){ showMessage('Locked product save failed: ' + result.error.message, 'red'); return; }
+  clearLockedProductForm(); await loadLockedProductsAdmin(); showMessage('Locked product saved.', 'green');
+}
+function clearLockedProductForm(){
+  ['lockedProductIdInput','lockedProductTitleInput','lockedProductDescriptionInput','lockedProductPreviewInput','lockedProductPrivateInput','lockedProductLinkInput','lockedProductDeliveryInput','lockedProductDurationInput'].forEach(id => setInputValue(id, ''));
+  setInputValue('lockedProductTypeInput', 'package'); setInputValue('lockedProductStatusInput', 'locked'); setInputValue('lockedProductPriceInput', 'Pricing will be communicated soon'); setInputValue('lockedProductRiskInput', 'medium'); setInputValue('lockedProductCtaInput', 'Access Package'); setInputValue('lockedProductDisclaimerInput', 'Educational/testing access only. Not financial advice. No guaranteed profits.'); setInputValue('lockedProductSortInput', '100');
+  const pub = document.getElementById('lockedProductPublicInput'); if(pub) pub.checked = true;
+}
+async function toggleLockedProductPublic(id, status){
+  const { error } = await supabaseClient.from('locked_products').update({ is_public: !!status, updated_at:new Date().toISOString() }).eq('id', id);
+  if(error){ showMessage('Visibility update failed: ' + error.message, 'red'); return; }
+  await loadLockedProductsAdmin(); showMessage('Visibility updated.', 'green');
+}
+async function deleteLockedProduct(id){
+  if(!confirm('Delete this locked product?')) return;
+  const { error } = await supabaseClient.from('locked_products').delete().eq('id', id);
+  if(error){ showMessage('Delete failed: ' + error.message, 'red'); return; }
+  await loadLockedProductsAdmin(); showMessage('Locked product deleted.', 'green');
+}
+function fillClientAccessProductOptions(){
+  const select = document.getElementById('clientAccessProductInput'); if(!select) return;
+  select.innerHTML = lockedProductsData.map(p => `<option value="${p.id}">${escapeHTML(p.title || 'Product')}</option>`).join('');
+}
+async function loadClientAccessAdmin(){ await Promise.allSettled([loadLockedProductsAdmin(), loadClientAccessRecords(), loadAccessLogs()]); }
+async function loadClientAccessRecords(){
+  const { data, error } = await supabaseClient.from('client_access').select('*').order('created_at', { ascending:false }).limit(300);
+  if(error){ const list = document.getElementById('clientAccessList'); if(list) list.innerHTML = '<p class="muted">Client access table not ready or access blocked.</p>'; return; }
+  clientAccessData = data || []; renderClientAccessList();
+}
+async function loadAccessLogs(){
+  const { data } = await supabaseClient.from('access_logs').select('*').order('created_at', { ascending:false }).limit(300);
+  accessLogsData = data || [];
+}
+function renderClientAccessList(){
+  const list = document.getElementById('clientAccessList'); if(!list) return;
+  const search = (document.getElementById('clientAccessSearchInput')?.value || '').toLowerCase();
+  const filtered = clientAccessData.filter(item => [item.client_name, item.whatsapp, item.product_title, item.access_code, item.status].join(' ').toLowerCase().includes(search));
+  if(!filtered.length){ list.innerHTML = '<p class="muted">No access records found.</p>'; return; }
+  list.innerHTML = filtered.map(item => `
+    <div class="mini-item ${item.status === 'revoked' ? 'danger-soft' : ''}">
+      <h4>${escapeHTML(item.product_title || 'Access')}</h4>
+      <p>${escapeHTML(item.client_name || '')} · ${escapeHTML(item.whatsapp || '')}</p>
+      <p>Code: <strong>${escapeHTML(item.access_code || '')}</strong> · Status: ${escapeHTML(item.status || 'active')} · Sharing attempts: ${Number(item.share_attempts || 0)}</p>
+      <p>${item.expires_at ? 'Expires: ' + formatDate(item.expires_at) : 'No expiry'} · Last access: ${item.last_access_at ? formatDate(item.last_access_at) : 'Never'}</p>
+      <div class="mini-actions"><button class="ghost-btn" onclick="copyAccessCode('${escapeJS(item.access_code || '')}')">Copy Code</button><button class="ghost-btn" onclick="editClientAccess(${item.id})">Edit</button><button class="ghost-btn" onclick="resetClientAccessDevice(${item.id})">Reset Device</button><button class="ghost-btn" onclick="updateClientAccessStatus(${item.id}, 'active')">Activate</button><button class="mini-danger" onclick="updateClientAccessStatus(${item.id}, 'revoked')">Revoke</button></div>
+    </div>`).join('');
+}
+function editClientAccess(id){
+  const item = clientAccessData.find(x => x.id === id); if(!item) return;
+  setInputValue('clientAccessIdInput', item.id); setInputValue('clientAccessPaymentIdInput', item.payment_proof_id || ''); setInputValue('clientAccessNameInput', item.client_name || ''); setInputValue('clientAccessWhatsappInput', item.whatsapp || ''); setInputValue('clientAccessEmailInput', item.email || ''); setInputValue('clientAccessProductInput', item.product_id || ''); setInputValue('clientAccessCodeInput', item.access_code || ''); setInputValue('clientAccessPrivateInput', item.private_content || ''); setInputValue('clientAccessLinkInput', item.private_link || ''); setInputValue('clientAccessDeliveryInput', item.delivery_notes || ''); setInputValue('clientAccessStatusInput', item.status || 'active');
+  const expiry = document.getElementById('clientAccessExpiryInput'); if(expiry) expiry.value = item.expires_at ? new Date(item.expires_at).toISOString().slice(0,16) : '';
+  showMessage('Client access loaded for editing.', 'green');
+}
+function releaseFromPaymentProof(paymentId){
+  const proof = paymentProofsData.find(x => x.id === paymentId);
+  if(!proof){ showMessage('Payment proof not found.', 'red'); return; }
+  setInputValue('clientAccessPaymentIdInput', proof.id); setInputValue('clientAccessNameInput', proof.name || ''); setInputValue('clientAccessWhatsappInput', proof.whatsapp || ''); setInputValue('clientAccessEmailInput', proof.email || ''); setInputValue('clientAccessCodeInput', generateAccessCode()); setInputValue('clientAccessStatusInput', 'active');
+  const related = String(proof.related_to || '').toLowerCase();
+  const match = lockedProductsData.find(p => related && (String(p.title || '').toLowerCase().includes(related) || related.includes(String(p.title || '').toLowerCase().split(' ')[0])));
+  if(match) setInputValue('clientAccessProductInput', match.id);
+  switchTab('clientaccess'); showMessage('Payment proof loaded. Choose/confirm product then click Create Access.', 'green');
+}
+async function createClientAccessManual(){
+  const id = document.getElementById('clientAccessIdInput')?.value;
+  const productId = Number(document.getElementById('clientAccessProductInput')?.value || 0);
+  const product = lockedProductsData.find(p => Number(p.id) === productId);
+  const clientName = document.getElementById('clientAccessNameInput')?.value.trim();
+  const whatsapp = document.getElementById('clientAccessWhatsappInput')?.value.trim();
+  const accessCode = (document.getElementById('clientAccessCodeInput')?.value.trim() || generateAccessCode()).toUpperCase();
+  if(!clientName || !whatsapp || !product){ showMessage('Client name, WhatsApp, and product are required.', 'red'); return; }
+  const expiryRaw = document.getElementById('clientAccessExpiryInput')?.value;
+  let expiresAt = expiryRaw ? new Date(expiryRaw).toISOString() : null;
+  if(!expiresAt && product.access_duration_days){ const d = new Date(); d.setDate(d.getDate() + Number(product.access_duration_days)); expiresAt = d.toISOString(); }
+  const payload = { product_id:product.id, payment_proof_id:document.getElementById('clientAccessPaymentIdInput')?.value || null, client_name:clientName, whatsapp, email:document.getElementById('clientAccessEmailInput')?.value.trim() || '', product_title:product.title, access_code:accessCode, status:document.getElementById('clientAccessStatusInput')?.value || 'active', private_content:document.getElementById('clientAccessPrivateInput')?.value.trim() || product.private_content || '', private_link:document.getElementById('clientAccessLinkInput')?.value.trim() || product.private_link || '', delivery_notes:document.getElementById('clientAccessDeliveryInput')?.value.trim() || product.delivery_notes || '', expires_at:expiresAt, updated_at:new Date().toISOString() };
+  const result = id ? await supabaseClient.from('client_access').update(payload).eq('id', id) : await supabaseClient.from('client_access').insert([payload]);
+  if(result.error){ showMessage('Client access save failed: ' + result.error.message, 'red'); return; }
+  if(payload.payment_proof_id){ await supabaseClient.from('payment_proofs').update({ status:'verified', updated_at:new Date().toISOString() }).eq('id', payload.payment_proof_id); }
+  clearClientAccessForm(); await loadClientAccessAdmin(); if(typeof loadPaymentProofs === 'function') await loadPaymentProofs(); showMessage('Access released. Send the code to the client: ' + accessCode, 'green');
+}
+function clearClientAccessForm(){ ['clientAccessIdInput','clientAccessPaymentIdInput','clientAccessNameInput','clientAccessWhatsappInput','clientAccessEmailInput','clientAccessCodeInput','clientAccessPrivateInput','clientAccessLinkInput','clientAccessDeliveryInput','clientAccessExpiryInput'].forEach(id => setInputValue(id, '')); setInputValue('clientAccessStatusInput', 'active'); }
+function generateAccessCode(){ const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let code = 'LKT-'; for(let i=0;i<6;i++) code += chars[Math.floor(Math.random()*chars.length)]; return code; }
+function generateAccessCodeIntoForm(){ setInputValue('clientAccessCodeInput', generateAccessCode()); }
+async function updateClientAccessStatus(id, status){ const { error } = await supabaseClient.from('client_access').update({ status, updated_at:new Date().toISOString() }).eq('id', id); if(error){ showMessage('Access status update failed: ' + error.message, 'red'); return; } await loadClientAccessRecords(); showMessage('Access status updated.', 'green'); }
+async function resetClientAccessDevice(id){ if(!confirm('Reset device binding for this client? Use this only if the real client changed device.')) return; const { error } = await supabaseClient.from('client_access').update({ device_hash:null, session_hash:null, share_attempts:0, status:'active', updated_at:new Date().toISOString() }).eq('id', id); if(error){ showMessage('Device reset failed: ' + error.message, 'red'); return; } await loadClientAccessRecords(); showMessage('Device binding reset. Client can activate again.', 'green'); }
+function copyAccessCode(code){ if(!code) return; navigator.clipboard?.writeText(code); showMessage('Access code copied: ' + code, 'green'); }
+
+
 /* PAYMENT PROOFS v13 */
 async function loadPaymentsAdmin(){
   await Promise.allSettled([
@@ -1279,6 +1439,7 @@ function renderPaymentProofs(){
           <button class="ghost-btn" onclick="openPaymentWhatsapp(${item.id})">WhatsApp</button>
           <button class="ghost-btn" onclick="updatePaymentProofStatus(${item.id}, 'under_review')">Review</button>
           <button class="ghost-btn" onclick="updatePaymentProofStatus(${item.id}, 'verified')">Verify</button>
+          <button class="ghost-btn" onclick="releaseFromPaymentProof(${item.id})">Release</button>
           <button class="mini-danger" onclick="updatePaymentProofStatus(${item.id}, 'rejected')">Reject</button>
         </div>
       </td>

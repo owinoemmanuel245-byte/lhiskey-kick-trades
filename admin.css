@@ -465,3 +465,10 @@ td:nth-child(2){color:var(--text);}
   color:var(--green);
   font-family:'DM Mono',monospace;
 }
+
+
+
+/* ── LOCKED PRODUCTS ADMIN v14 ── */
+#tab-lockedproducts .form-card input,#tab-lockedproducts .form-card textarea,#tab-lockedproducts .form-card select,#tab-clientaccess .form-card input,#tab-clientaccess .form-card textarea,#tab-clientaccess .form-card select{background:var(--bg2);color:var(--text);border:1px solid var(--border2);padding:12px}
+.inline-action{display:grid;grid-template-columns:1fr auto;gap:8px}
+.danger-soft{border-color:#ff4b4b60!important;background:#ff4b4b08!important}

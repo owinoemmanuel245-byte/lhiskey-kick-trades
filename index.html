@@ -20,6 +20,7 @@
     <li><a href="#join">Join</a></li>
     <li><a href="#showcase">Showcase</a></li>
     <li><a href="#packages">Packages</a></li>
+    <li><a href="#locked-products">Products</a></li>
     <li><a href="#payments">Payments</a></li>
     <li><a href="#strategies">Strategies</a></li>
     <li><a href="#contact">Contact</a></li>
@@ -384,6 +385,37 @@
 
 
 <!-- PAYMENTS -->
+
+<!-- LOCKED PRODUCTS -->
+<section class="locked-products-section" id="locked-products">
+  <p class="section-tag">→ Locked Products</p>
+  <h2 class="section-title fade-up">Locked Packages & Private Access</h2>
+  <p class="section-sub fade-up">Preview products safely. Full content unlocks only after payment proof is approved and admin releases access.</p>
+  <div class="locked-products-grid" id="publicLockedProducts">
+    <div class="locked-product-card fade-up visible">
+      <span class="lock-badge">Loading</span>
+      <h3>Loading products...</h3>
+      <p>Please wait while we load available locked products.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CLIENT ACCESS PORTAL -->
+<section class="client-access-section" id="client-access">
+  <p class="section-tag">→ Client Access</p>
+  <h2 class="section-title fade-up">Unlock Your Approved Package</h2>
+  <p class="section-sub fade-up">Enter the WhatsApp number used during payment and the access code from admin. Codes are one-client access and sharing attempts can revoke access.</p>
+  <div class="client-access-card fade-up">
+    <div class="request-grid">
+      <div><label for="accessWhatsappInput">WhatsApp Number</label><input id="accessWhatsappInput" type="tel" placeholder="+254..."/></div>
+      <div><label for="accessCodeInput">Access Code</label><input id="accessCodeInput" type="text" placeholder="LKT-XXXXXX"/></div>
+    </div>
+    <button class="btn-primary request-btn" onclick="checkClientAccess()">Unlock Access →</button>
+    <p class="nl-disclaimer" id="clientAccessMsg">One code is linked to one client/device. Sharing may revoke access.</p>
+    <div id="clientUnlockedBox" class="unlocked-box hidden"></div>
+  </div>
+</section>
+
 <section class="payments-section" id="payments">
   <p class="section-tag">→ Payments</p>
   <h2 class="section-title fade-up">Bank / M-Pesa Payment Proof</h2>

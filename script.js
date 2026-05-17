@@ -118,6 +118,7 @@ let publicStrategiesCache = [];
 let publicPackagesCache = [];
 let publicShowcaseCache = [];
 let publicPaymentSettings = {};
+let publicLockedProductsCache = [];
 let assistantConfig = {
   assistant_name: 'LHISKEY AI Assistant',
   status: 'offline',
@@ -526,6 +527,105 @@ function generateAssistantReply(question){
 }
 
 
+
+/* ── LOCKED PRODUCTS + CLIENT ACCESS v14 ── */
+async function loadPublicLockedProducts(){
+  try{
+    const { data, error } = await supabaseClient
+      .from('locked_products')
+      .select('id,title,product_type,status,price_label,short_description,preview_content,risk_level,disclaimer,cta_label,sort_order')
+      .eq('is_public', true)
+      .in('status', ['preview','locked','available'])
+      .order('sort_order', { ascending:true })
+      .order('created_at', { ascending:false })
+      .limit(12);
+    if(error){ console.warn('Locked products load error:', error.message); renderPublicLockedProducts([]); return; }
+    publicLockedProductsCache = data || [];
+    renderPublicLockedProducts(publicLockedProductsCache);
+  }catch(err){ console.warn('Locked products failed:', err); renderPublicLockedProducts([]); }
+}
+function renderPublicLockedProducts(items){
+  const container = document.getElementById('publicLockedProducts');
+  if(!container) return;
+  if(!items || !items.length){
+    container.innerHTML = `<div class="locked-product-card fade-up visible"><span class="lock-badge">Coming Soon</span><h3>Locked products will appear here</h3><p>Admin will publish preview-only products here when ready. Full access remains locked until payment approval.</p></div>`;
+    return;
+  }
+  container.innerHTML = items.map(item => `
+    <div class="locked-product-card fade-up visible">
+      <div class="locked-top"><span class="lock-badge">${safePublicHTML(formatLockedStatus(item.status))}</span><strong>${safePublicHTML(String(item.product_type || 'package').toUpperCase())}</strong></div>
+      <h3>${safePublicHTML(item.title || 'Locked Product')}</h3>
+      <p>${safePublicHTML(item.short_description || '')}</p>
+      <div class="preview-box">${safePublicHTML(item.preview_content || 'Preview details will be shared soon.')}</div>
+      <div class="locked-meta"><span>Risk: ${safePublicHTML(String(item.risk_level || 'medium').toUpperCase())}</span><span>${safePublicHTML(item.price_label || 'Pricing will be communicated soon')}</span></div>
+      <div class="showcase-disclaimer">${safePublicHTML(item.disclaimer || 'Educational/testing access only. Not financial advice.')}</div>
+      <button class="btn-primary" onclick="startLockedProductAccess('${safeAttr(item.id || '')}', '${safeAttr(item.title || 'Locked Product')}')">${safePublicHTML(item.cta_label || 'Access Package')} →</button>
+    </div>`).join('');
+  document.querySelectorAll('.fade-up').forEach(el => { if(typeof observer !== 'undefined') observer.observe(el); });
+}
+function formatLockedStatus(status){
+  return ({draft:'Draft', preview:'Preview Only', locked:'Locked', available:'Payment Required', paused:'Paused'})[status] || 'Locked';
+}
+function startLockedProductAccess(productId, title){
+  const paymentRelated = document.getElementById('paymentRelatedInput');
+  const accessTitle = title || 'Locked Product';
+  if(paymentRelated) paymentRelated.value = accessTitle;
+  const msg = document.getElementById('paymentProofMsg');
+  if(msg){ msg.style.color = 'var(--muted)'; msg.textContent = `To access ${accessTitle}, make payment only after admin confirmation, then submit payment proof here. Admin approval unlocks access.`; }
+  const paymentSection = document.getElementById('payments');
+  if(paymentSection) paymentSection.scrollIntoView({ behavior:'smooth' });
+}
+async function checkClientAccess(){
+  const msg = document.getElementById('clientAccessMsg');
+  const box = document.getElementById('clientUnlockedBox');
+  const whatsapp = document.getElementById('accessWhatsappInput')?.value.trim();
+  const access_code = document.getElementById('accessCodeInput')?.value.trim();
+  if(!whatsapp || !access_code){ if(msg){ msg.style.color = 'var(--red)'; msg.textContent = 'WhatsApp number and access code are required.'; } return; }
+  const device_hash = getOrCreateDeviceHash();
+  const session_hash = getOrCreateAccessSessionHash();
+  if(msg){ msg.style.color = 'var(--muted)'; msg.textContent = 'Checking access...'; }
+  if(box){ box.classList.add('hidden'); box.innerHTML = ''; }
+  try{
+    const res = await fetch('/api/client-access', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ whatsapp, access_code, device_hash, session_hash }) });
+    const result = await res.json();
+    if(!res.ok || !result.ok) throw new Error(result.error || 'Access denied');
+    const access = result.access || {};
+    if(msg){ msg.style.color = 'var(--green)'; msg.textContent = 'Access unlocked successfully.'; }
+    if(box){
+      box.classList.remove('hidden');
+      box.innerHTML = `<h3>${safePublicHTML(access.product_title || 'Unlocked Access')}</h3>
+        <p><strong>Client:</strong> ${safePublicHTML(access.client_name || '')}</p>
+        <p><strong>Status:</strong> ${safePublicHTML(access.status || 'active')}</p>
+        ${access.expires_at ? `<p><strong>Expires:</strong> ${safePublicHTML(new Date(access.expires_at).toLocaleString('en-KE'))}</p>` : ''}
+        <div class="unlocked-content"><h4>Unlocked Content</h4><p>${safePublicHTML(access.private_content || 'Admin has activated your access. Follow the delivery notes below.')}</p>
+        ${access.private_link ? `<p><strong>Private Link:</strong> <a href="${safeAttr(access.private_link)}" target="_blank" rel="noopener noreferrer">Open private resource</a></p>` : ''}
+        ${access.delivery_notes ? `<p><strong>Delivery Notes:</strong> ${safePublicHTML(access.delivery_notes)}</p>` : ''}</div>
+        <div class="payment-warning">${safePublicHTML(access.disclaimer || 'Educational/testing access only. Not financial advice. No guaranteed profits.')}</div>`;
+    }
+  }catch(err){ console.warn('Client access failed:', err); if(msg){ msg.style.color = 'var(--red)'; msg.textContent = err.message || 'Access denied. Contact admin.'; } }
+}
+function getOrCreateDeviceHash(){
+  const key = 'lhiskey_device_hash';
+  let value = localStorage.getItem(key);
+  if(!value){ value = 'dev-' + cryptoRandomId(); localStorage.setItem(key, value); }
+  return value;
+}
+function getOrCreateAccessSessionHash(){
+  const key = 'lhiskey_access_session';
+  let value = sessionStorage.getItem(key);
+  if(!value){ value = 'sess-' + cryptoRandomId(); sessionStorage.setItem(key, value); }
+  return value;
+}
+function cryptoRandomId(){
+  if(window.crypto && window.crypto.getRandomValues){
+    const arr = new Uint32Array(4);
+    window.crypto.getRandomValues(arr);
+    return Array.from(arr).map(x => x.toString(16)).join('');
+  }
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+
 /* ── PAYMENT PROOF v13 ── */
 async function loadPublicPaymentSettings(){
   try{
@@ -678,6 +778,7 @@ document.addEventListener('DOMContentLoaded' , function(){
   loadPublishedPackages();
   loadPublicShowcase();
   loadPublicPaymentSettings();
+  loadPublicLockedProducts();
   loadAssistantSettings();
 
   const aiInput = document.getElementById('aiInput');

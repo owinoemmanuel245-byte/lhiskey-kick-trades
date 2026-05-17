@@ -1253,3 +1253,26 @@
 @media(max-width:900px){
   .payment-layout{grid-template-columns:1fr;}
 }
+
+
+
+/* ── LOCKED PRODUCTS / CLIENT ACCESS v14 ── */
+.locked-products-section{background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.locked-products-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border)}
+.locked-product-card{background:var(--card);padding:30px;min-height:340px;display:flex;flex-direction:column;gap:14px}
+.locked-top{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.locked-top strong,.lock-badge{font-family:'DM Mono',monospace;font-size:.68rem;padding:4px 8px;border:1px solid #00ff8830;color:var(--green);background:var(--green-dim);text-transform:uppercase}
+.locked-product-card h3{font-family:'Syne',sans-serif;font-size:1.15rem}
+.locked-product-card p,.locked-meta span{color:var(--muted);line-height:1.65;font-size:.88rem}
+.preview-box{border:1px solid var(--border);background:var(--bg2);padding:12px;color:var(--muted);font-size:.82rem;line-height:1.6;flex:1}
+.locked-meta{display:flex;justify-content:space-between;gap:12px}
+.client-access-section{background:var(--bg2);border-bottom:1px solid var(--border)}
+.client-access-card{max-width:900px;background:var(--card);border:1px solid var(--border2);padding:34px}
+.client-access-card label{display:block;color:var(--muted);font-size:.8rem;margin:12px 0 6px}
+.client-access-card input{width:100%;background:var(--bg2);color:var(--text);border:1px solid var(--border2);padding:12px;font-family:'Inter',sans-serif;outline:none}
+.unlocked-box{margin-top:22px;border:1px solid #00ff8735;background:var(--green-dim);padding:20px}
+.unlocked-box h3{font-family:'Syne',sans-serif;margin-bottom:12px}
+.unlocked-content{margin-top:14px;background:var(--bg);border:1px solid var(--border);padding:16px}
+.unlocked-content h4{color:var(--green);margin-bottom:8px}
+.hidden{display:none!important}
+@media(max-width:900px){.locked-products-grid{grid-template-columns:1fr}}
