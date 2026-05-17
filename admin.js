@@ -22,6 +22,7 @@ let paymentSettingsData = {};
 let lockedProductsData = [];
 let clientAccessData = [];
 let accessLogsData = [];
+let analyticsData = {};
 let liveChatSessions = [];
 let selectedLiveSessionId = null;
 let liveChatMessagesCache = [];
@@ -101,6 +102,7 @@ async function logoutAdmin(){
 
 async function bootstrapDashboard(){
   await Promise.all([
+    loadAnalyticsDashboard(),
     loadWatchlist(),
     loadSettings(),
     loadStrategies(),
@@ -136,6 +138,7 @@ function switchTab(name){
   if(name === 'showcase') loadShowcaseItems();
   if(name === 'earlyaccess') loadEarlyAccessRequests();
   if(name === 'payments') loadPaymentsAdmin();
+  if(name === 'analytics') loadAnalyticsDashboard();
   if(name === 'lockedproducts') loadLockedProductsAdmin();
   if(name === 'clientaccess') loadClientAccessAdmin();
 }
@@ -1330,6 +1333,176 @@ function openAccessWhatsapp(id){
   window.open(`https://wa.me/${clean}?text=${encodeURIComponent(buildReleaseMessage(item))}`, '_blank');
 }
 
+
+
+
+/* V15 MEGA ANALYTICS DASHBOARD */
+async function loadAnalyticsDashboard(){
+  const cards = document.getElementById('analyticsCards');
+  if(cards){
+    cards.innerHTML = '<div class="analytics-card"><span>Loading</span><strong>—</strong><p>Fetching platform metrics...</p></div>';
+  }
+
+  try{
+    const [
+      watchlist,
+      leads,
+      clientRequests,
+      earlyAccess,
+      paymentProofs,
+      clientAccess,
+      lockedProducts,
+      chatSessions,
+      accessLogs
+    ] = await Promise.allSettled([
+      analyticsSelect('watchlist', '*', 500),
+      analyticsSelect('visitor_leads', '*', 500),
+      analyticsSelect('client_requests', '*', 500),
+      analyticsSelect('early_access_requests', '*', 500),
+      analyticsSelect('payment_proofs', '*', 500),
+      analyticsSelect('client_access', '*', 500),
+      analyticsSelect('locked_products', '*', 500),
+      analyticsSelect('chat_sessions', '*', 500),
+      analyticsSelect('access_logs', '*', 500)
+    ]);
+
+    const data = {
+      watchlist: unwrapSettled(watchlist),
+      leads: unwrapSettled(leads),
+      clientRequests: unwrapSettled(clientRequests),
+      earlyAccess: unwrapSettled(earlyAccess),
+      paymentProofs: unwrapSettled(paymentProofs),
+      clientAccess: unwrapSettled(clientAccess),
+      lockedProducts: unwrapSettled(lockedProducts),
+      chatSessions: unwrapSettled(chatSessions),
+      accessLogs: unwrapSettled(accessLogs)
+    };
+
+    analyticsData = data;
+    renderAnalyticsDashboard(data);
+  }catch(err){
+    console.error('[loadAnalyticsDashboard]', err);
+    if(cards){
+      cards.innerHTML = '<div class="analytics-card"><span>Error</span><strong>!</strong><p>Could not load analytics.</p></div>';
+    }
+  }
+}
+
+async function analyticsSelect(table, columns = '*', limit = 300){
+  const { data, error } = await supabaseClient
+    .from(table)
+    .select(columns)
+    .order('created_at', { ascending:false })
+    .limit(limit);
+
+  if(error){
+    console.warn(`[analytics] ${table} unavailable:`, error.message);
+    return [];
+  }
+
+  return data || [];
+}
+
+function unwrapSettled(result){
+  return result.status === 'fulfilled' ? (result.value || []) : [];
+}
+
+function renderAnalyticsDashboard(data){
+  const paymentProofs = data.paymentProofs || [];
+  const clientAccess = data.clientAccess || [];
+  const accessLogs = data.accessLogs || [];
+  const lockedProducts = data.lockedProducts || [];
+  const chatSessions = data.chatSessions || [];
+
+  const verifiedPayments = paymentProofs.filter(x => x.status === 'verified');
+  const pendingPayments = paymentProofs.filter(x => ['new','under_review'].includes(x.status));
+  const rejectedPayments = paymentProofs.filter(x => x.status === 'rejected');
+  const verifiedAmount = verifiedPayments.reduce((sum, x) => sum + Number(x.amount_paid || 0), 0);
+
+  const activeAccess = clientAccess.filter(x => x.status === 'active');
+  const revokedAccess = clientAccess.filter(x => x.status === 'revoked');
+  const sharedAccess = clientAccess.filter(x => x.status === 'shared_attempt_detected');
+  const sharingLogs = accessLogs.filter(x => ['sharing_attempt','suspicious_attempt'].includes(x.event_type));
+
+  const openChats = chatSessions.filter(x => x.status !== 'closed');
+
+  const metrics = [
+    ['Watchlist', data.watchlist.length, 'Total email signups'],
+    ['Visitor Leads', data.leads.length, 'Captured support/client leads'],
+    ['Client Requests', data.clientRequests.length, 'Package/service requests'],
+    ['Early Access', data.earlyAccess.length, 'Testing waitlist requests'],
+    ['Payment Proofs', paymentProofs.length, `${pendingPayments.length} pending · ${verifiedPayments.length} verified`],
+    ['Verified Amount', `KES ${verifiedAmount.toLocaleString('en-KE')}`, 'Total verified manual payments'],
+    ['Active Access', activeAccess.length, 'Currently active client releases'],
+    ['Revoked Access', revokedAccess.length, `${sharedAccess.length} sharing-warning records`],
+    ['Locked Products', lockedProducts.length, 'Preview/locked products in system'],
+    ['Open Chats', openChats.length, 'Live/support conversations not closed'],
+    ['Security Alerts', sharingLogs.length, 'Sharing/suspicious access attempts'],
+    ['Rejected Payments', rejectedPayments.length, 'Proofs rejected by admin']
+  ];
+
+  const cards = document.getElementById('analyticsCards');
+  if(cards){
+    cards.innerHTML = metrics.map(([label, value, note]) => `
+      <div class="analytics-card">
+        <span>${escapeHTML(label)}</span>
+        <strong>${escapeHTML(value)}</strong>
+        <p>${escapeHTML(note)}</p>
+      </div>
+    `).join('');
+  }
+
+  renderAnalyticsMiniList(
+    'analyticsRecentPayments',
+    paymentProofs.slice(0, 8),
+    item => `
+      <div class="analytics-mini-item">
+        <strong>${escapeHTML(item.name || 'Client')}</strong>
+        <span>${escapeHTML(item.currency || 'KES')} ${Number(item.amount_paid || 0).toLocaleString('en-KE')} · ${escapeHTML(item.status || 'new')}</span>
+        <p>${escapeHTML(item.related_to || 'General payment')} · ${formatDate(item.created_at)}</p>
+      </div>
+    `,
+    'No payment proofs yet.'
+  );
+
+  renderAnalyticsMiniList(
+    'analyticsRecentAccess',
+    clientAccess.slice(0, 8),
+    item => `
+      <div class="analytics-mini-item">
+        <strong>${escapeHTML(item.client_name || 'Client')}</strong>
+        <span>${escapeHTML(item.product_title || 'Access')} · ${escapeHTML(item.status || 'active')}</span>
+        <p>Code: ${escapeHTML(item.access_code || '')} · Attempts: ${Number(item.share_attempts || 0)}</p>
+      </div>
+    `,
+    'No access releases yet.'
+  );
+
+  renderAnalyticsMiniList(
+    'analyticsSecurityAlerts',
+    accessLogs.filter(x => ['sharing_attempt','suspicious_attempt','revoked_attempt'].includes(x.event_type)).slice(0, 8),
+    item => `
+      <div class="analytics-mini-item danger">
+        <strong>${escapeHTML(item.event_type || 'Alert')}</strong>
+        <span>${escapeHTML(item.whatsapp || '')} · ${escapeHTML(item.access_code || '')}</span>
+        <p>${escapeHTML(item.message || '')} · ${formatDate(item.created_at)}</p>
+      </div>
+    `,
+    'No sharing/security alerts yet.'
+  );
+}
+
+function renderAnalyticsMiniList(id, rows, renderer, emptyText){
+  const box = document.getElementById(id);
+  if(!box) return;
+
+  if(!rows || rows.length === 0){
+    box.innerHTML = `<p class="muted">${escapeHTML(emptyText)}</p>`;
+    return;
+  }
+
+  box.innerHTML = rows.map(renderer).join('');
+}
 
 
 /* PAYMENT PROOFS v13 */

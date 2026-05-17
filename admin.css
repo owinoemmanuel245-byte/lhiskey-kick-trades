@@ -477,3 +477,104 @@ td:nth-child(2){color:var(--text);}
 /* ── ACCESS POLISH ADMIN v14.1 ── */
 #tab-clientaccess .mini-actions{flex-wrap:wrap}
 #tab-clientaccess .mini-actions button{margin-bottom:6px}
+
+
+
+/* ── V15 MEGA ADMIN ANALYTICS ── */
+.analytics-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+  margin:18px 0 24px;
+}
+
+.analytics-card{
+  background:var(--card);
+  border:1px solid var(--border2);
+  padding:18px;
+  min-height:128px;
+}
+
+.analytics-card span{
+  display:block;
+  color:var(--muted);
+  font-size:.75rem;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+  margin-bottom:10px;
+}
+
+.analytics-card strong{
+  display:block;
+  color:var(--green);
+  font-family:'DM Mono',monospace;
+  font-size:1.45rem;
+  margin-bottom:8px;
+  word-break:break-word;
+}
+
+.analytics-card p{
+  color:var(--muted);
+  font-size:.82rem;
+  line-height:1.5;
+}
+
+.analytics-panels{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;
+}
+
+.analytics-panel-card{
+  background:var(--card);
+  border:1px solid var(--border2);
+  padding:18px;
+}
+
+.analytics-panel-card h3{
+  margin-bottom:14px;
+}
+
+.analytics-mini-list{
+  display:grid;
+  gap:10px;
+}
+
+.analytics-mini-item{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  padding:12px;
+}
+
+.analytics-mini-item.danger{
+  border-color:#ff4b4b50;
+  background:#ff4b4b08;
+}
+
+.analytics-mini-item strong{
+  display:block;
+  color:var(--text);
+  margin-bottom:5px;
+}
+
+.analytics-mini-item span{
+  display:block;
+  color:var(--green);
+  font-size:.82rem;
+  margin-bottom:5px;
+}
+
+.analytics-mini-item p{
+  color:var(--muted);
+  font-size:.78rem;
+  line-height:1.5;
+}
+
+@media(max-width:1150px){
+  .analytics-grid{grid-template-columns:repeat(2,1fr);}
+  .analytics-panels{grid-template-columns:1fr;}
+}
+
+@media(max-width:650px){
+  .analytics-grid{grid-template-columns:1fr;}
+}

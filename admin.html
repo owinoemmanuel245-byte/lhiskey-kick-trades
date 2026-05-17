@@ -62,6 +62,45 @@
 
     <section class="dashboard hidden" id="dashboardPanel">
 
+      
+      <!-- ═══════════════════════════════════════════════
+           ANALYTICS
+      ═══════════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-analytics">
+        <div class="panel-head">
+          <div>
+            <p class="section-tag">→ Analytics</p>
+            <h2>Business Control Center</h2>
+            <p class="muted">A clean overview of leads, requests, payments, locked products, access releases, and sharing attempts.</p>
+          </div>
+          <div class="actions">
+            <button type="button" class="ghost-btn" onclick="loadAnalyticsDashboard()">Refresh Analytics</button>
+          </div>
+        </div>
+
+        <div class="analytics-grid" id="analyticsCards">
+          <div class="analytics-card"><span>Loading</span><strong>—</strong><p>Please wait...</p></div>
+        </div>
+
+        <div class="analytics-panels">
+          <div class="analytics-panel-card">
+            <h3>Recent Payments</h3>
+            <div id="analyticsRecentPayments" class="analytics-mini-list">Loading...</div>
+          </div>
+
+          <div class="analytics-panel-card">
+            <h3>Recent Access Releases</h3>
+            <div id="analyticsRecentAccess" class="analytics-mini-list">Loading...</div>
+          </div>
+
+          <div class="analytics-panel-card">
+            <h3>Sharing / Security Alerts</h3>
+            <div id="analyticsSecurityAlerts" class="analytics-mini-list">Loading...</div>
+          </div>
+        </div>
+      </div>
+
+
       <div class="tab-panel active" id="tab-watchlist">
         <div class="panel-head">
           <div>
