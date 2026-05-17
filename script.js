@@ -117,6 +117,7 @@ let cmsContacts = {};
 let publicStrategiesCache = [];
 let publicPackagesCache = [];
 let publicShowcaseCache = [];
+let publicPaymentSettings = {};
 let assistantConfig = {
   assistant_name: 'LHISKEY AI Assistant',
   status: 'offline',
@@ -524,11 +525,159 @@ function generateAssistantReply(question){
   return 'I can help with forex education, LHISKEY KICK TRADES platform information, packages, safe showcase items, strategy notes, bot/tool information, and support routing.';
 }
 
+
+/* ── PAYMENT PROOF v13 ── */
+async function loadPublicPaymentSettings(){
+  try{
+    const { data, error } = await supabaseClient
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'payments')
+      .single();
+
+    publicPaymentSettings = error ? {} : (data?.value || {});
+    renderPublicPaymentSettings();
+  }catch(err){
+    console.warn('Payment settings failed:', err);
+    publicPaymentSettings = {};
+    renderPublicPaymentSettings();
+  }
+}
+
+function renderPublicPaymentSettings(){
+  const box = document.getElementById('publicPaymentInstructions');
+  if(!box) return;
+
+  const p = publicPaymentSettings || {};
+  const bankName = p.bank_name || 'To be communicated by admin';
+  const accountName = p.account_name || 'LHISKEY KICK TRADES';
+  const accountNumber = p.account_number || 'To be communicated by admin';
+  const bankBranch = p.bank_branch || '';
+  const paybill = p.mpesa_paybill || 'To be communicated by admin';
+  const till = p.mpesa_till || 'To be communicated by admin';
+  const mpesaAccount = p.mpesa_account_name || 'LHISKEY KICK TRADES';
+  const instructions = p.instructions || 'Payment instructions are shared after admin confirms your request. Submit proof only after admin confirms what you are paying for.';
+
+  box.innerHTML = `
+    <div class="payment-detail-grid">
+      <div><span>Bank</span><strong>${safePublicHTML(bankName)}</strong></div>
+      <div><span>Account Name</span><strong>${safePublicHTML(accountName)}</strong></div>
+      <div><span>Account Number</span><strong>${safePublicHTML(accountNumber)}</strong></div>
+      ${bankBranch ? `<div><span>Branch</span><strong>${safePublicHTML(bankBranch)}</strong></div>` : ''}
+      <div><span>M-Pesa PayBill</span><strong>${safePublicHTML(paybill)}</strong></div>
+      <div><span>M-Pesa Till</span><strong>${safePublicHTML(till)}</strong></div>
+      <div><span>M-Pesa Account Name</span><strong>${safePublicHTML(mpesaAccount)}</strong></div>
+    </div>
+    <p>${safePublicHTML(instructions)}</p>
+  `;
+}
+
+async function submitPaymentProof(){
+  const msg = document.getElementById('paymentProofMsg');
+  const fileInput = document.getElementById('paymentProofFileInput');
+  const file = fileInput?.files?.[0] || null;
+
+  const payload = {
+    name: document.getElementById('paymentNameInput')?.value.trim(),
+    whatsapp: document.getElementById('paymentWhatsappInput')?.value.trim(),
+    email: document.getElementById('paymentEmailInput')?.value.trim(),
+    related_to: document.getElementById('paymentRelatedInput')?.value.trim(),
+    amount_paid: document.getElementById('paymentAmountInput')?.value,
+    currency: 'KES',
+    payment_method: document.getElementById('paymentMethodInput')?.value || 'bank',
+    payment_reference: document.getElementById('paymentReferenceInput')?.value.trim(),
+    message: document.getElementById('paymentMessageInput')?.value.trim(),
+    related_request_type: 'manual'
+  };
+
+  if(!payload.name || !payload.whatsapp || !payload.payment_reference){
+    if(msg){
+      msg.style.color = 'var(--red)';
+      msg.textContent = 'Name, WhatsApp, and transaction/reference code are required.';
+    }
+    return;
+  }
+
+  if(file){
+    const allowed = ['image/png','image/jpeg','image/jpg','image/webp','application/pdf'];
+    if(!allowed.includes(file.type)){
+      if(msg){
+        msg.style.color = 'var(--red)';
+        msg.textContent = 'Only PNG, JPG, WEBP, or PDF proof files are allowed.';
+      }
+      return;
+    }
+
+    if(file.size > 5 * 1024 * 1024){
+      if(msg){
+        msg.style.color = 'var(--red)';
+        msg.textContent = 'Proof file is too large. Maximum allowed is 5 MB.';
+      }
+      return;
+    }
+  }
+
+  if(msg){
+    msg.style.color = 'var(--muted)';
+    msg.textContent = file ? 'Uploading proof...' : 'Submitting payment proof...';
+  }
+
+  try{
+    if(file){
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `proofs/${Date.now()}-${safeName}`;
+
+      const upload = await supabaseClient.storage
+        .from('payment-proofs')
+        .upload(path, file, { upsert:false });
+
+      if(upload.error) throw new Error(upload.error.message || 'Proof upload failed');
+
+      payload.proof_file_name = file.name;
+      payload.proof_file_path = path;
+      payload.proof_file_type = file.type || 'unknown';
+      payload.proof_file_size = file.size;
+    }
+
+    const res = await fetch('/api/payment-proof', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await res.json();
+    if(!res.ok || !result.ok) throw new Error(result.error || 'Payment proof save failed');
+
+    if(msg){
+      msg.style.color = 'var(--green)';
+      msg.textContent = 'Payment proof submitted successfully. Admin will verify manually.';
+    }
+
+    [
+      'paymentNameInput','paymentWhatsappInput','paymentEmailInput','paymentRelatedInput',
+      'paymentAmountInput','paymentReferenceInput','paymentMessageInput'
+    ].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.value = '';
+    });
+
+    if(fileInput) fileInput.value = '';
+  }catch(err){
+    console.warn('Payment proof failed:', err);
+    if(msg){
+      msg.style.color = 'var(--red)';
+      msg.textContent = 'Could not submit payment proof. Please contact admin on WhatsApp.';
+    }
+  }
+}
+
+
 document.addEventListener('DOMContentLoaded' , function(){
   loadCMSContent();
   loadPublishedStrategies();
   loadPublishedPackages();
   loadPublicShowcase();
+  loadPublicPaymentSettings();
   loadAssistantSettings();
 
   const aiInput = document.getElementById('aiInput');

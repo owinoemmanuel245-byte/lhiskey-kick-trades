@@ -17,6 +17,8 @@ let packagesData = [];
 let clientRequestsData = [];
 let showcaseData = [];
 let earlyAccessData = [];
+let paymentProofsData = [];
+let paymentSettingsData = {};
 let liveChatSessions = [];
 let selectedLiveSessionId = null;
 let liveChatMessagesCache = [];
@@ -107,6 +109,7 @@ async function bootstrapDashboard(){
     loadClientRequests(),
     loadShowcaseItems(),
     loadEarlyAccessRequests(),
+    loadPaymentsAdmin(),
     loadLeads(),
     loadLiveChats()
   ]);
@@ -127,6 +130,7 @@ function switchTab(name){
   if(name === 'clientrequests') loadClientRequests();
   if(name === 'showcase') loadShowcaseItems();
   if(name === 'earlyaccess') loadEarlyAccessRequests();
+  if(name === 'payments') loadPaymentsAdmin();
 }
 
 /* WATCHLIST */
@@ -1128,6 +1132,232 @@ function downloadEarlyAccessCSV(){
   const link = document.createElement('a');
   link.href = url;
   link.download = 'lhiskey-kick-trades-early-access.csv';
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+
+
+/* PAYMENT PROOFS v13 */
+async function loadPaymentsAdmin(){
+  await Promise.allSettled([
+    loadPaymentSettingsAdmin(),
+    loadPaymentProofs()
+  ]);
+}
+
+async function loadPaymentSettingsAdmin(){
+  try{
+    const { data, error } = await supabaseClient
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'payments')
+      .single();
+
+    paymentSettingsData = error ? {} : (data?.value || {});
+    fillPaymentSettingsForm();
+  }catch(err){
+    console.warn('loadPaymentSettingsAdmin failed:', err);
+  }
+}
+
+function fillPaymentSettingsForm(){
+  const p = paymentSettingsData || {};
+  setInputValue('payBankNameInput', p.bank_name || '');
+  setInputValue('payAccountNameInput', p.account_name || 'LHISKEY KICK TRADES');
+  setInputValue('payAccountNumberInput', p.account_number || '');
+  setInputValue('payBankBranchInput', p.bank_branch || '');
+  setInputValue('payPaybillInput', p.mpesa_paybill || '');
+  setInputValue('payTillInput', p.mpesa_till || '');
+  setInputValue('payMpesaAccountInput', p.mpesa_account_name || 'LHISKEY KICK TRADES');
+  setInputValue('payInstructionsInput', p.instructions || 'Payment instructions are shared after admin confirms the package, service, or access request. After payment, submit your reference code and proof using the Payment Proof form.');
+}
+
+function setInputValue(id, value){
+  const el = document.getElementById(id);
+  if(el) el.value = value;
+}
+
+async function savePaymentSettings(){
+  const value = {
+    bank_name: document.getElementById('payBankNameInput')?.value.trim() || 'To be communicated by admin',
+    account_name: document.getElementById('payAccountNameInput')?.value.trim() || 'LHISKEY KICK TRADES',
+    account_number: document.getElementById('payAccountNumberInput')?.value.trim() || 'To be communicated by admin',
+    bank_branch: document.getElementById('payBankBranchInput')?.value.trim() || '',
+    mpesa_paybill: document.getElementById('payPaybillInput')?.value.trim() || 'To be communicated by admin',
+    mpesa_till: document.getElementById('payTillInput')?.value.trim() || 'To be communicated by admin',
+    mpesa_account_name: document.getElementById('payMpesaAccountInput')?.value.trim() || 'LHISKEY KICK TRADES',
+    instructions: document.getElementById('payInstructionsInput')?.value.trim() || 'Payment instructions are shared after admin confirms your request.'
+  };
+
+  const { error } = await supabaseClient
+    .from('site_settings')
+    .upsert({ key:'payments', value, updated_at:new Date().toISOString() });
+
+  if(error){
+    showMessage('Payment settings save failed: ' + error.message, 'red');
+    return;
+  }
+
+  paymentSettingsData = value;
+  showMessage('Payment settings saved. Refresh the public website to see changes.', 'green');
+}
+
+async function loadPaymentProofs(){
+  const body = document.getElementById('paymentProofBody');
+  if(body) body.innerHTML = '<tr><td colspan="10">Loading...</td></tr>';
+
+  const { data, error } = await supabaseClient
+    .from('payment_proofs')
+    .select('*')
+    .order('created_at', { ascending:false })
+    .limit(300);
+
+  if(error){
+    if(body) body.innerHTML = '<tr><td colspan="10">Payment proofs table not ready or access blocked.</td></tr>';
+    renderPaymentStats();
+    return;
+  }
+
+  paymentProofsData = data || [];
+  renderPaymentProofs();
+  renderPaymentStats();
+}
+
+function renderPaymentStats(){
+  const box = document.getElementById('paymentStatsBox');
+  if(!box) return;
+
+  const total = paymentProofsData.length;
+  const fresh = paymentProofsData.filter(x => x.status === 'new').length;
+  const verified = paymentProofsData.filter(x => x.status === 'verified').length;
+  const rejected = paymentProofsData.filter(x => x.status === 'rejected').length;
+  const amount = paymentProofsData
+    .filter(x => x.status === 'verified')
+    .reduce((sum, x) => sum + Number(x.amount_paid || 0), 0);
+
+  box.innerHTML = `
+    <div class="pay-stat"><span>Total proofs</span><strong>${total}</strong></div>
+    <div class="pay-stat"><span>New</span><strong>${fresh}</strong></div>
+    <div class="pay-stat"><span>Verified</span><strong>${verified}</strong></div>
+    <div class="pay-stat"><span>Rejected</span><strong>${rejected}</strong></div>
+    <div class="pay-stat"><span>Verified amount</span><strong>KES ${amount.toLocaleString('en-KE')}</strong></div>
+  `;
+}
+
+function renderPaymentProofs(){
+  const body = document.getElementById('paymentProofBody');
+  if(!body) return;
+
+  const search = (document.getElementById('paymentProofSearchInput')?.value || '').trim().toLowerCase();
+
+  const filtered = paymentProofsData.filter(item =>
+    [
+      item.name, item.whatsapp, item.email, item.related_to, item.payment_method,
+      item.payment_reference, item.status, item.message
+    ].join(' ').toLowerCase().includes(search)
+  );
+
+  if(filtered.length === 0){
+    body.innerHTML = '<tr><td colspan="10">No payment proofs found.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = filtered.map((item, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td>${escapeHTML(item.name || '')}<br><small>${escapeHTML(item.whatsapp || '')}</small></td>
+      <td>${escapeHTML(item.related_to || 'General')}</td>
+      <td>${escapeHTML(item.currency || 'KES')} ${Number(item.amount_paid || 0).toLocaleString('en-KE')}</td>
+      <td>${escapeHTML(item.payment_method || 'bank')}</td>
+      <td>${escapeHTML(item.payment_reference || '')}</td>
+      <td>${escapeHTML(item.status || 'new')}</td>
+      <td>${item.proof_file_path ? `<button class="ghost-btn" onclick="openPaymentProofFile(${item.id})">Open</button>` : '<span class="muted">No file</span>'}</td>
+      <td>${formatDate(item.created_at)}</td>
+      <td>
+        <div class="mini-actions">
+          <button class="ghost-btn" onclick="openPaymentWhatsapp(${item.id})">WhatsApp</button>
+          <button class="ghost-btn" onclick="updatePaymentProofStatus(${item.id}, 'under_review')">Review</button>
+          <button class="ghost-btn" onclick="updatePaymentProofStatus(${item.id}, 'verified')">Verify</button>
+          <button class="mini-danger" onclick="updatePaymentProofStatus(${item.id}, 'rejected')">Reject</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function openPaymentProofFile(id){
+  const item = paymentProofsData.find(x => x.id === id);
+  if(!item || !item.proof_file_path){
+    showMessage('No proof file found.', 'red');
+    return;
+  }
+
+  const { data, error } = await supabaseClient.storage
+    .from('payment-proofs')
+    .createSignedUrl(item.proof_file_path, 120);
+
+  if(error){
+    showMessage('Could not open proof: ' + error.message, 'red');
+    return;
+  }
+
+  window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+}
+
+async function updatePaymentProofStatus(id, status){
+  const { error } = await supabaseClient
+    .from('payment_proofs')
+    .update({ status, updated_at:new Date().toISOString() })
+    .eq('id', id);
+
+  if(error){
+    showMessage('Payment proof status failed: ' + error.message, 'red');
+    return;
+  }
+
+  await loadPaymentProofs();
+  showMessage('Payment proof status updated.', 'green');
+}
+
+function openPaymentWhatsapp(id){
+  const item = paymentProofsData.find(x => x.id === id);
+  if(!item){
+    showMessage('Payment proof not found.', 'red');
+    return;
+  }
+
+  const clean = String(item.whatsapp || '').replace(/[^\d]/g, '');
+  if(!clean){
+    showMessage('No WhatsApp number found.', 'red');
+    return;
+  }
+
+  const text = encodeURIComponent(`Hello ${item.name || ''}, this is Emmanuel from LHISKEY KICK TRADES. I received your payment proof for ${item.related_to || 'your request'} and I am verifying it.`);
+  window.open(`https://wa.me/${clean}?text=${text}`, '_blank');
+}
+
+function downloadPaymentProofsCSV(){
+  if(!paymentProofsData || paymentProofsData.length === 0){
+    showMessage('No payment proof data to download.', 'red');
+    return;
+  }
+
+  const rows = [
+    ['id','name','whatsapp','email','related_to','amount_paid','currency','payment_method','payment_reference','status','message','created_at'],
+    ...paymentProofsData.map(i => [
+      i.id, i.name || '', i.whatsapp || '', i.email || '', i.related_to || '',
+      i.amount_paid || '', i.currency || 'KES', i.payment_method || '', i.payment_reference || '',
+      i.status || '', i.message || '', i.created_at || ''
+    ])
+  ];
+
+  const csv = rows.map(row => row.map(value => `"${String(value).replaceAll('"','""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'lhiskey-kick-trades-payment-proofs.csv';
   link.click();
   URL.revokeObjectURL(url);
 }

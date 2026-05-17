@@ -1162,3 +1162,94 @@
 @media(max-width:700px){
   .showcase-grid{grid-template-columns:1fr;}
 }
+
+
+
+/* ── PAYMENT PROOF v13 ── */
+.payments-section{
+  background:var(--bg2);
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+
+.payment-layout{
+  display:grid;
+  grid-template-columns:0.9fr 1.2fr;
+  gap:20px;
+}
+
+.payment-instructions-card,
+.payment-proof-card{
+  background:var(--card);
+  border:1px solid var(--border2);
+  padding:32px;
+}
+
+.payment-instructions-card h3,
+.payment-proof-card h3{
+  font-family:'Syne',sans-serif;
+  margin-bottom:18px;
+}
+
+.payment-detail-grid{
+  display:grid;
+  gap:10px;
+  margin-bottom:18px;
+}
+
+.payment-detail-grid div{
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  border-bottom:1px solid var(--border);
+  padding:10px 0;
+}
+
+.payment-detail-grid span{
+  color:var(--muted);
+  font-size:.8rem;
+}
+
+.payment-detail-grid strong{
+  color:var(--text);
+  text-align:right;
+}
+
+.payment-warning{
+  margin-top:18px;
+  color:var(--muted);
+  border:1px solid #00ff8735;
+  background:var(--green-dim);
+  padding:14px;
+  font-size:.82rem;
+  line-height:1.6;
+}
+
+.payment-proof-card label{
+  display:block;
+  color:var(--muted);
+  font-size:.8rem;
+  margin:12px 0 6px;
+}
+
+.payment-proof-card input,
+.payment-proof-card select,
+.payment-proof-card textarea{
+  width:100%;
+  background:var(--bg2);
+  color:var(--text);
+  border:1px solid var(--border2);
+  padding:12px;
+  font-family:'Inter',sans-serif;
+  outline:none;
+}
+
+.payment-proof-card input:focus,
+.payment-proof-card select:focus,
+.payment-proof-card textarea:focus{
+  border-color:var(--green);
+}
+
+@media(max-width:900px){
+  .payment-layout{grid-template-columns:1fr;}
+}

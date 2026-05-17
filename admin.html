@@ -27,6 +27,7 @@
       <button type="button" class="tab" data-tab="showcase" onclick="switchTab('showcase')">Safe Showcase</button>
       <button type="button" class="tab" data-tab="earlyaccess" onclick="switchTab('earlyaccess')">Early Access</button>
       <button type="button" class="tab" data-tab="clientrequests" onclick="switchTab('clientrequests')">Client Requests</button>
+      <button type="button" class="tab" data-tab="payments" onclick="switchTab('payments')">Payments</button>
       <button type="button" class="tab" data-tab="files" onclick="switchTab('files')">Bot Files</button>
       <button type="button" class="tab" data-tab="knowledge" onclick="switchTab('knowledge')">Knowledge Base</button>
       <button type="button" class="tab" data-tab="leads" onclick="switchTab('leads')">Leads</button>
@@ -416,6 +417,88 @@
                 </tr>
               </thead>
               <tbody id="earlyAccessBody">
+                <tr><td colspan="10">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+
+      
+      <!-- ═══════════════════════════════════════════════
+           PAYMENTS
+      ═══════════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-payments">
+        <div class="panel-head">
+          <div>
+            <p class="section-tag">→ Payments</p>
+            <h2>Bank / M-Pesa Payment Proofs</h2>
+            <p class="muted">Set payment instructions and verify client payment proofs manually.</p>
+          </div>
+          <div class="actions">
+            <button type="button" class="ghost-btn" onclick="loadPaymentsAdmin()">Refresh</button>
+            <button type="button" onclick="savePaymentSettings()">Save Payment Settings</button>
+          </div>
+        </div>
+
+        <div class="form-grid two">
+          <div class="form-card">
+            <h3>Payment Instructions</h3>
+
+            <label>Bank Name</label>
+            <input id="payBankNameInput" type="text" placeholder="Example: KCB / Equity / Co-op"/>
+
+            <label>Account Name</label>
+            <input id="payAccountNameInput" type="text" placeholder="LHISKEY KICK TRADES"/>
+
+            <label>Account Number</label>
+            <input id="payAccountNumberInput" type="text" placeholder="Bank account number"/>
+
+            <label>Branch optional</label>
+            <input id="payBankBranchInput" type="text" placeholder="Branch"/>
+
+            <label>M-Pesa PayBill optional</label>
+            <input id="payPaybillInput" type="text" placeholder="PayBill"/>
+
+            <label>M-Pesa Till optional</label>
+            <input id="payTillInput" type="text" placeholder="Till number"/>
+
+            <label>M-Pesa Account Name</label>
+            <input id="payMpesaAccountInput" type="text" placeholder="LHISKEY KICK TRADES"/>
+
+            <label>Instructions</label>
+            <textarea id="payInstructionsInput" rows="5" placeholder="Payment instructions shown on the website"></textarea>
+          </div>
+
+          <div class="list-card">
+            <h3>Payment Proof Summary</h3>
+            <div id="paymentStatsBox" class="payment-admin-stats">Loading...</div>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Payment Proofs</h3>
+            <input type="search" id="paymentProofSearchInput" placeholder="Search payment proofs..." oninput="renderPaymentProofs()"/>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Client</th>
+                  <th>Payment For</th>
+                  <th>Amount</th>
+                  <th>Method</th>
+                  <th>Reference</th>
+                  <th>Status</th>
+                  <th>Proof</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="paymentProofBody">
                 <tr><td colspan="10">Loading...</td></tr>
               </tbody>
             </table>
