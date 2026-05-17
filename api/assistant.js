@@ -69,7 +69,7 @@ const SUPABASE_RETRY_DELAYS  = [400];    // ms delays between retries (one retry
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const VALID_URGENCIES = new Set(['low', 'medium', 'high']);
-const VALID_INTENTS   = new Set(['education', 'contact', 'bot_info', 'packages', 'about', 'general']);
+const VALID_INTENTS   = new Set(['education', 'contact', 'bot_info', 'packages', 'strategy_info', 'about', 'general']);
 
 // ─────────────────────────────────────────────────────────────────
 //  MAIN HANDLER
@@ -369,7 +369,8 @@ function buildSystemPrompt({ knowledgeItems, packageItems, contacts, strategies,
 ## WHAT YOU CAN DO
 - Explain forex concepts: SMC, ICT, liquidity, order blocks, FVG, market structure, candlesticks
 - Explain risk management, trading psychology, discipline
-- Describe ${brand} services, bots, tools, strategies, and subscriptions
+- Describe ${brand} services, packages, bots, tools, published strategies, and subscriptions
+- Clearly separate Services/Packages from Published Trading Strategies
 - Provide contact information
 - Route visitors to a live admin when appropriate
 
@@ -386,7 +387,12 @@ function buildSystemPrompt({ knowledgeItems, packageItems, contacts, strategies,
 - Visitor directly asks for a human agent, admin, or live support
 
 Do NOT set handoff=true for general help questions, educational requests,
-"I don't understand X", or curiosity about the platform.
+"I don't understand X", package questions, strategy-library questions, or curiosity about the platform.
+
+## PACKAGE VS STRATEGY ROUTING
+- If the visitor asks about price, cost, fees, packages, packs, mentorship, consultation, access, subscription, offers, or how to request a service: answer from PUBLISHED SERVICES / PACKAGES.
+- If the visitor asks about published trading strategies, strategy rules, strategy notes, setup logic, or the strategy library: answer from PUBLISHED STRATEGIES or education context.
+- If the visitor asks "How much is the SMC pack?" this is a package/pricing question, not an SMC education question.
 
 ## TONE
 Professional, warm, clear Kenyan-English. Concise but thorough.
@@ -401,7 +407,7 @@ Respond ONLY with a single valid JSON object — no markdown, no preamble, no ex
   "handoff":        false,
   "handoff_reason": "",
   "urgency":        "low",
-  "intent":         "education|contact|bot_info|packages|about|general"
+  "intent":         "education|contact|bot_info|packages|strategy_info|about|general"
 }
 If handoff is true fill handoff_reason (concise, admin-facing) and urgency ("low"|"medium"|"high").`;
 
@@ -547,20 +553,47 @@ function classifyIntentFallback(message) {
   const q      = normalizeText(message);
   const tokens = tokenize(q);
 
-  const educationTerms = [
-    'smc', 'ict', 'liquidity', 'order block', 'fvg', 'fair value gap',
-    'market structure', 'gold', 'xauusd', 'forex', 'risk', 'supply',
-    'demand', 'candlestick', 'trend', 'breakout', 'support', 'resistance',
-    'strategy', 'indicator', 'chart', 'analysis',
+  /*
+   * IMPORTANT ORDER:
+   * 1. Packages/pricing/services first.
+   * 2. Published strategy-library intent second.
+   * 3. Education third.
+   *
+   * This prevents:
+   * "How much is the SMC pack?" → education
+   * "Do you have strategy packages?" → education
+   */
+
+  const pricingOrPackagePhrases = [
+    'how much', 'what price', 'what is the price', 'price of', 'cost of',
+    'how do i pay', 'where do i pay', 'payment for', 'request access',
+    'get access', 'book consultation', 'need consultation', 'one on one',
+    '1 on 1', 'sign up', 'subscribe'
   ];
-  if (tokenMatch(tokens, educationTerms, 1)) return { type: 'education', handoff: false };
 
   const packageTerms = [
-    'package', 'packages', 'service', 'services', 'price', 'pricing',
-    'cost', 'mentorship', 'mentor', 'consultation', 'consult',
-    'subscription', 'offer', 'offers', 'request',
+    'package', 'packages', 'pack', 'packs', 'service', 'services',
+    'price', 'pricing', 'cost', 'costs', 'fee', 'fees', 'charge', 'charges',
+    'pay', 'payment', 'mentorship', 'mentor', 'consultation', 'consult',
+    'subscription', 'subscribe', 'offer', 'offers', 'request', 'access',
+    'onboarding', 'book'
   ];
-  if (tokenMatch(tokens, packageTerms, 1)) return { type: 'packages', handoff: false };
+
+  if (phraseMatch(q, pricingOrPackagePhrases) || tokenMatch(tokens, packageTerms, 1)) {
+    return { type: 'packages', handoff: false };
+  }
+
+  const strategyLibraryPhrases = [
+    'your strategy', 'your strategies', 'published strategy', 'published strategies',
+    'strategy library', 'trading strategy', 'trading strategies',
+    'show strategy', 'show strategies', 'available strategy', 'available strategies',
+    'tell me about your strategy', 'tell me about your strategies',
+    'strategy notes', 'strategy rules'
+  ];
+
+  if (phraseMatch(q, strategyLibraryPhrases) || tokenMatch(tokens, ['strategies'], 1)) {
+    return { type: 'strategy_info', handoff: false };
+  }
 
   const contactTerms = ['contact', 'phone', 'email', 'whatsapp', 'number', 'call', 'socials', 'dm'];
   if (tokenMatch(tokens, contactTerms, 1)) return { type: 'contact', handoff: false };
@@ -574,6 +607,14 @@ function classifyIntentFallback(message) {
   ) {
     return { type: 'about', handoff: false };
   }
+
+  const educationTerms = [
+    'smc', 'ict', 'liquidity', 'order block', 'fvg', 'fair value gap',
+    'market structure', 'gold', 'xauusd', 'forex', 'risk', 'supply',
+    'demand', 'candlestick', 'trend', 'breakout', 'support', 'resistance',
+    'indicator', 'chart', 'analysis'
+  ];
+  if (tokenMatch(tokens, educationTerms, 1)) return { type: 'education', handoff: false };
 
   return { type: 'general', handoff: false };
 }
@@ -609,7 +650,8 @@ function buildFallbackReply({ message, decision, contacts, strategies, knowledge
     );
   }
 
-  if (decision.type === 'packages') return buildPackagesReply(packageItems);
+  if (decision.type === 'packages') return buildPackagesReply(packageItems, message);
+  if (decision.type === 'strategy_info') return buildStrategiesReply(strategies, message);
   if (decision.type === 'contact')  return buildContactReply(contacts);
 
   const kb = scoreKB(knowledgeItems, message, { minScore: 7 });
@@ -1028,7 +1070,7 @@ async function supabaseRest(path, options = {}) {
 //  TEXT / CONTACT HELPERS
 // ─────────────────────────────────────────────────────────────────
 
-function buildPackagesReply(packageItems) {
+function buildPackagesReply(packageItems, message = '') {
   if (!Array.isArray(packageItems) || packageItems.length === 0) {
     return (
       'LHISKEY KICK TRADES offers forex education, strategy support, bot/tool information, ' +
@@ -1037,17 +1079,130 @@ function buildPackagesReply(packageItems) {
     );
   }
 
-  const list = packageItems.slice(0, 6).map((pkg, i) => {
+  const query = normalizeText(message);
+  const queryTokens = extractKeywords(query);
+
+  const scored = packageItems.map(pkg => {
+    const title       = normalizeText(String(pkg.title || ''));
+    const category    = normalizeText(String(pkg.category || ''));
+    const description = normalizeText(String(pkg.description || ''));
+    const features    = Array.isArray(pkg.features) ? normalizeText(pkg.features.join(' ')) : '';
+
+    let score = 0;
+    for (const token of queryTokens) {
+      if (title.includes(token)) score += 7;
+      if (category.includes(token)) score += 4;
+      if (description.includes(token)) score += 2;
+      if (features.includes(token)) score += 2;
+    }
+
+    // Aliases that make visitor wording feel human.
+    if ((query.includes('smc') || query.includes('ict')) && (title.includes('smc') || description.includes('smc') || features.includes('smc'))) score += 14;
+    if ((query.includes('beginner') || query.includes('new trader') || query.includes('start')) && title.includes('beginner')) score += 10;
+    if ((query.includes('bot') || query.includes('tool') || query.includes('ea') || query.includes('mt5')) && (title.includes('bot') || title.includes('tool') || category.includes('tool'))) score += 12;
+    if ((query.includes('consult') || query.includes('one on one') || query.includes('1 on 1') || query.includes('call')) && (title.includes('consult') || category.includes('consult'))) score += 12;
+    if ((query.includes('mentor') || query.includes('mentorship')) && (category.includes('mentor') || title.includes('beginner') || title.includes('smc'))) score += 9;
+    if ((query.includes('price') || query.includes('cost') || query.includes('fee') || query.includes('how much')) && score > 0) score += 4;
+
+    return { pkg, score };
+  }).sort((a, b) => b.score - a.score);
+
+  const bestMatches = scored.filter(x => x.score >= 7).slice(0, 3);
+  const listSource = bestMatches.length ? bestMatches.map(x => x.pkg) : packageItems.slice(0, 6);
+
+  const intro = bestMatches.length
+    ? 'This looks like the most relevant LHISKEY KICK TRADES package/service:'
+    : 'Available LHISKEY KICK TRADES packages/services:';
+
+  const list = listSource.map((pkg, i) => {
     const title = sanitizeText(String(pkg.title || 'Service Package'), 120);
     const price = sanitizeText(String(pkg.price_label || 'Contact admin'), 80);
-    const desc  = sanitizeText(String(pkg.description || ''), 220);
-    return `${i + 1}. **${title}** — ${price}\n${desc}`;
-  }).join('\n\n');
+    const desc  = sanitizeText(String(pkg.description || ''), 240);
+    const features = Array.isArray(pkg.features) && pkg.features.length
+      ? '
+Includes: ' + pkg.features.slice(0, 4).map(f => sanitizeText(String(f), 80)).join(', ')
+      : '';
+
+    return `${i + 1}. **${title}** — ${price}
+${desc}${features}`;
+  }).join('
+
+');
 
   return (
-    `Available LHISKEY KICK TRADES packages/services:\n\n${list}\n\n` +
+    `${intro}
+
+${list}
+
+` +
     'To proceed, open the Services/Packages section on the website, choose the package, ' +
     'and submit the request form. You can also ask for a live agent if you need personal help choosing.'
+  );
+}
+
+function buildStrategiesReply(strategies, message = '') {
+  if (!Array.isArray(strategies) || strategies.length === 0) {
+    return (
+      'LHISKEY KICK TRADES can publish trading strategy notes in the Strategy Library. ' +
+      'For now, check the public Strategies section on the website or ask for live support if you need help choosing a strategy path. ' +
+      '📊 Educational purposes only — not financial advice.'
+    );
+  }
+
+  const query = normalizeText(message);
+  const queryTokens = extractKeywords(query);
+
+  const scored = strategies.map(strategy => {
+    const title       = normalizeText(String(strategy.title || ''));
+    const category    = normalizeText(String(strategy.category || ''));
+    const timeframe   = normalizeText(String(strategy.timeframe || ''));
+    const description = normalizeText(String(strategy.description || ''));
+    const content     = normalizeText(String(strategy.content || ''));
+
+    let score = 0;
+    for (const token of queryTokens) {
+      if (title.includes(token)) score += 7;
+      if (category.includes(token)) score += 4;
+      if (timeframe.includes(token)) score += 4;
+      if (description.includes(token)) score += 2;
+      if (content.includes(token)) score += 1;
+    }
+
+    if ((query.includes('gold') || query.includes('xau')) && (title.includes('gold') || title.includes('xau') || description.includes('gold'))) score += 8;
+    if (query.includes('scalp') && (title.includes('scalp') || description.includes('scalp'))) score += 8;
+    if (query.includes('m15') && (title.includes('m15') || timeframe.includes('m15'))) score += 8;
+    if ((query.includes('smc') || query.includes('ict')) && (title.includes('smc') || description.includes('smc') || content.includes('smc'))) score += 8;
+
+    return { strategy, score };
+  }).sort((a, b) => b.score - a.score);
+
+  const bestMatches = scored.filter(x => x.score >= 6).slice(0, 4);
+  const listSource = bestMatches.length ? bestMatches.map(x => x.strategy) : strategies.slice(0, 4);
+
+  const intro = bestMatches.length
+    ? 'This looks like the most relevant published strategy note:'
+    : 'Published LHISKEY KICK TRADES strategy notes:';
+
+  const list = listSource.map((s, i) => {
+    const title = sanitizeText(String(s.title || 'Strategy'), 120);
+    const timeframe = sanitizeText(String(s.timeframe || ''), 50);
+    const description = sanitizeText(String(s.description || 'No description.'), 250);
+    return `${i + 1}. **${title}**${timeframe ? ` (${timeframe})` : ''}
+${description}`;
+  }).join('
+
+');
+
+  return (
+    `${intro}
+
+${list}
+
+` +
+    'These are educational strategy notes, not personal trade signals. For guidance on which package or strategy path fits you, use the request form or ask for a live agent.
+
+' +
+    '📊 Educational purposes only — not financial advice.'
   );
 }
 
