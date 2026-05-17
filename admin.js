@@ -1884,6 +1884,16 @@ function enrichLiveSessions(){
     const latestAdmin = msgs.find(m => m.author_type === 'admin') || null;
     const latestLead = relatedLeads[0] || null;
 
+    const unreadCount = latestAdmin
+      ? msgs.filter(m => (m.author_type === 'visitor' || m.author_type === 'system') && Number(m.id) > Number(latestAdmin.id)).length
+      : msgs.filter(m => m.author_type === 'visitor' || m.author_type === 'system').length;
+
+    const needsReply =
+      session.status !== 'closed' &&
+      unreadCount > 0 &&
+      latest &&
+      (latest.author_type === 'visitor' || latest.author_type === 'system');
+
     const displayName =
       latestLead?.name ||
       session.visitor_name ||
@@ -1905,12 +1915,6 @@ function enrichLiveSessions(){
       session.handoff_reason ||
       (session.status === 'waiting_agent' ? 'Live agent request' : 'General chat');
 
-    const needsReply =
-      session.status !== 'closed' &&
-      latest &&
-      (latest.author_type === 'visitor' || latest.author_type === 'system') &&
-      (!latestAdmin || Number(latest.id) > Number(latestAdmin.id));
-
     const hasLeadDetails = !!(latestLead?.name || latestLead?.whatsapp || session.visitor_whatsapp);
 
     return {
@@ -1918,6 +1922,8 @@ function enrichLiveSessions(){
       _messages: msgs,
       _lead: latestLead,
       _latest: latest,
+      _latestAdmin: latestAdmin,
+      _unreadCount: unreadCount,
       _needsReply: !!needsReply,
       _displayName: displayName,
       _displayPhone: displayPhone,
@@ -1929,6 +1935,7 @@ function enrichLiveSessions(){
   });
 
   liveChatSessions.sort((a,b) => {
+    if((a._unreadCount > 0) !== (b._unreadCount > 0)) return a._unreadCount > 0 ? -1 : 1;
     if(a._needsReply !== b._needsReply) return a._needsReply ? -1 : 1;
     if(a.status === 'waiting_agent' && b.status !== 'waiting_agent') return -1;
     if(b.status === 'waiting_agent' && a.status !== 'waiting_agent') return 1;
@@ -1969,6 +1976,31 @@ function renderLiveInboxStats(){
   `;
 }
 
+function renderLiveInboxStats(){
+  const host = document.getElementById('liveSessionList')?.parentElement;
+  if(!host) return;
+
+  let stats = document.getElementById('liveInboxStats');
+  if(!stats){
+    stats = document.createElement('div');
+    stats.id = 'liveInboxStats';
+    stats.className = 'wa-inbox-tabs';
+    host.insertBefore(stats, document.getElementById('liveSessionList'));
+  }
+
+  const all = liveChatSessions.length;
+  const unread = liveChatSessions.filter(s => Number(s._unreadCount || 0) > 0).length;
+  const live = liveChatSessions.filter(s => s.status === 'waiting_agent' || s.status === 'live_agent').length;
+  const closed = liveChatSessions.filter(s => s.status === 'closed').length;
+
+  stats.innerHTML = `
+    <button type="button" class="${currentChatFilter === 'all' ? 'active' : ''}" onclick="setChatFilter('all')">All <span>${all}</span></button>
+    <button type="button" class="${currentChatFilter === 'unanswered' ? 'active' : ''}" onclick="setChatFilter('unanswered')">Unread <span>${unread}</span></button>
+    <button type="button" class="${currentChatFilter === 'open' ? 'active' : ''}" onclick="setChatFilter('open')">Open <span>${live}</span></button>
+    <button type="button" class="${currentChatFilter === 'closed' ? 'active' : ''}" onclick="setChatFilter('closed')">Closed <span>${closed}</span></button>
+  `;
+}
+
 function renderLiveSessions(){
   const list = document.getElementById('liveSessionList');
   if(!list) return;
@@ -1978,7 +2010,7 @@ function renderLiveSessions(){
 
   let filtered = liveChatSessions.filter(session => {
     if(currentChatFilter === 'open') return session.status !== 'closed';
-    if(currentChatFilter === 'unanswered') return session._needsReply;
+    if(currentChatFilter === 'unanswered') return Number(session._unreadCount || 0) > 0 || session._needsReply;
     if(currentChatFilter === 'closed') return session.status === 'closed';
     return true;
   });
@@ -1998,77 +2030,54 @@ function renderLiveSessions(){
     });
   }
 
+  renderLiveInboxStats();
+
   if(filtered.length === 0){
-    list.innerHTML = '<div class="empty-inbox-table"><strong>No requests in this view.</strong><p>Try another filter or search term.</p></div>';
+    list.innerHTML = '<div class="wa-empty-inbox"><strong>No chats here.</strong><p>Try another filter or search term.</p></div>';
     return;
   }
 
   list.innerHTML = `
-    <div class="support-request-table-wrap">
-      <table class="support-request-table">
-        <thead>
-          <tr>
-            <th>Client</th>
-            <th>Request / Latest Message</th>
-            <th>Phone</th>
-            <th>Status</th>
-            <th>Updated</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${filtered.map(session => {
-            const name = session._displayName || 'Website Visitor';
-            const initials = getInitials(name);
-            const latestText = session._lead?.message || session._latest?.content || 'No message yet';
-            const time = formatShortTime(session._latest?.created_at || session.updated_at || session.created_at);
-            const phone = session._displayPhone || 'No phone';
-            const statusText = session._needsReply ? 'UNANSWERED' : (session.status || 'bot_mode');
-            const statusClass = session._needsReply ? 'unanswered' : (session.status || 'bot_mode');
-            const rowClass = [
-              session.id === selectedLiveSessionId ? 'active' : '',
-              session._needsReply ? 'needs-reply' : '',
-              session._hasLeadDetails ? 'has-details' : 'missing-details'
-            ].join(' ');
+    <div class="wa-chat-list-v158">
+      ${filtered.map(session => {
+        const name = session._displayName || 'Website Visitor';
+        const initials = getInitials(name);
+        const latestText = session._lead?.message || session._latest?.content || 'No message yet';
+        const time = formatShortTime(session._latest?.created_at || session.updated_at || session.created_at);
+        const unread = Number(session._unreadCount || 0);
+        const active = session.id === selectedLiveSessionId ? 'active' : '';
+        const hasUnread = unread > 0 ? 'has-unread' : '';
+        const detail = session._displayPhone || (session._hasLeadDetails ? 'Details saved' : 'No phone');
+        const statusText = session._needsReply ? 'Unread' : (session.status || 'bot_mode');
 
-            return `
-              <tr class="${rowClass}" data-sid="${escapeHTML(String(session.id))}">
-                <td>
-                  <div class="support-client-cell">
-                    <div class="wa-avatar small">${escapeHTML(initials)}</div>
-                    <div>
-                      <strong>${escapeHTML(name)}</strong>
-                      <span>${escapeHTML(session._displayEmail || 'Website chat')}</span>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <div class="support-message-cell">
-                    <strong>${escapeHTML(session._requestReason || 'General chat')}</strong>
-                    <p>${escapeHTML(String(latestText).slice(0, 140))}</p>
-                    <small>${Number(session._messageCount || 0)} messages</small>
-                  </div>
-                </td>
-                <td>${escapeHTML(phone)}</td>
-                <td>
-                  <span class="status-pill ${escapeHTML(statusClass)}">${escapeHTML(statusText)}</span>
-                  ${session._hasLeadDetails ? '<small class="detail-ok">Details saved</small>' : '<small class="detail-missing">No details</small>'}
-                </td>
-                <td>${escapeHTML(time)}</td>
-                <td>
-                  <button class="open-chat-btn" type="button" onclick="selectLiveSession('${escapeHTML(String(session.id))}')">Open</button>
-                </td>
-              </tr>
-            `;
-          }).join('')}
-        </tbody>
-      </table>
+        return `
+          <button type="button" class="wa-chat-row-v158 ${active} ${hasUnread}" onclick="selectLiveSession('${escapeHTML(String(session.id))}')">
+            <div class="wa-avatar-v158">${escapeHTML(initials)}</div>
+            <div class="wa-row-main-v158">
+              <div class="wa-row-top-v158">
+                <strong>${escapeHTML(name)}</strong>
+                <span>${escapeHTML(time)}</span>
+              </div>
+              <div class="wa-row-preview-v158">
+                <p>${escapeHTML(String(latestText).slice(0, 86))}</p>
+                ${unread > 0 ? `<b>${unread}</b>` : ''}
+              </div>
+              <div class="wa-row-bottom-v158">
+                <small>${escapeHTML(statusText)}</small>
+                <small>${escapeHTML(detail)}</small>
+              </div>
+            </div>
+          </button>
+        `;
+      }).join('')}
     </div>
   `;
 }
 
 async function selectLiveSession(sessionId){
   selectedLiveSessionId = sessionId;
+  const openedSession = liveChatSessions.find(s => s.id === sessionId);
+  if(openedSession) openedSession._unreadCount = 0;
   renderLiveSessions();
   await loadLiveMessages();
 
