@@ -330,7 +330,7 @@ async function loadAssistantSettings(){
     assistantConfig = { ...assistantConfig, ...data };
 
     setText('assistantName', assistantConfig.assistant_name);
-    setText('assistantStatus', assistantConfig.status === 'online' ? 'Online assistant mode' : 'Offline support mode');
+    setText('assistantStatus', 'Online assistant mode');
     setText('assistantWelcome', assistantConfig.welcome_message);
   }catch(err){
     console.warn('Assistant settings failed:', err);
@@ -357,6 +357,209 @@ let aiConversationHistory = [];
 let currentChatSessionId = localStorage.getItem('lhiskey_chat_session_id') || null;
 let liveChatLastMessageId = Number(localStorage.getItem('lhiskey_chat_last_id') || 0);
 let liveChatPollTimer = null;
+
+
+/* ── ASSISTANT CONTROLS + LIVE DETAILS v15.6 ── */
+function installAssistantControls(){
+  const head = document.querySelector('.ai-head');
+  if(!head) return;
+
+  let controls = document.getElementById('aiControlButtons');
+  if(!controls){
+    controls = document.createElement('div');
+    controls.id = 'aiControlButtons';
+    controls.className = 'ai-control-buttons';
+    head.appendChild(controls);
+  }
+
+  if(!document.getElementById('refreshAssistantBtn')){
+    const refreshBtn = document.createElement('button');
+    refreshBtn.id = 'refreshAssistantBtn';
+    refreshBtn.type = 'button';
+    refreshBtn.textContent = '⟳';
+    refreshBtn.title = 'Refresh assistant agent';
+    refreshBtn.onclick = refreshAssistantAgent;
+    controls.appendChild(refreshBtn);
+  }
+
+  if(!document.getElementById('newChatBtn')){
+    const newBtn = document.createElement('button');
+    newBtn.id = 'newChatBtn';
+    newBtn.type = 'button';
+    newBtn.textContent = '↻';
+    newBtn.title = 'Start a new chat';
+    newBtn.onclick = resetAssistantChat;
+    controls.appendChild(newBtn);
+  }
+}
+
+async function refreshAssistantAgent(){
+  try{
+    setText('assistantStatus', 'Refreshing assistant...');
+    await Promise.allSettled([
+      loadAssistantSettings(),
+      loadPublicPaymentSettings?.(),
+      loadPublicLockedProducts?.(),
+      loadPublishedPackages?.(),
+      loadPublishedStrategies?.()
+    ]);
+    setText('assistantStatus', 'Online assistant mode');
+    addAssistantMessage('Assistant refreshed. You can continue chatting.', 'bot');
+  }catch(err){
+    console.warn('Assistant refresh failed:', err);
+    setText('assistantStatus', 'Online assistant mode');
+    addAssistantMessage('Assistant refreshed locally. You can continue chatting.', 'bot');
+  }
+}
+
+function resetAssistantChat(){
+  try{
+    if(liveChatPollTimer){
+      clearInterval(liveChatPollTimer);
+      liveChatPollTimer = null;
+    }
+
+    currentChatSessionId = null;
+    liveChatLastMessageId = 0;
+    aiConversationHistory = [];
+
+    localStorage.removeItem('lhiskey_chat_session_id');
+    localStorage.removeItem('lhiskey_chat_last_id');
+
+    const messages = document.getElementById('aiMessages');
+    if(messages){
+      messages.innerHTML = '';
+      const welcome = document.createElement('div');
+      welcome.className = 'ai-msg bot';
+      welcome.id = 'assistantWelcome';
+      welcome.textContent = assistantConfig.welcome_message || 'Hello, welcome to LHISKEY KICK TRADES. How can I help you today?';
+      messages.appendChild(welcome);
+    }
+
+    setText('assistantStatus', 'Online assistant mode');
+  }catch(err){
+    console.warn('Reset assistant chat failed:', err);
+  }
+}
+
+function isLiveAgentRequest(text){
+  const q = String(text || '').toLowerCase();
+  return [
+    'live agent','i need an agent','i want an agent','talk to agent','speak to agent',
+    'talk to admin','speak to admin','connect me to admin','connect me to agent',
+    'human support','live support','real person','customer care','talk to someone',
+    'speak to someone','i need help from admin','nataka agent','nataka admin','ongea na mtu'
+  ].some(phrase => q.includes(phrase));
+}
+
+function renderLeadCaptureForm(handoff = {}){
+  const messages = document.getElementById('aiMessages');
+  if(!messages) return;
+
+  if(document.getElementById('assistantLeadFormWrap')){
+    document.getElementById('assistantLeadFormWrap').scrollIntoView({ behavior:'smooth', block:'nearest' });
+    return;
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'ai-lead-form-wrap';
+  wrap.id = 'assistantLeadFormWrap';
+
+  const reason = handoff.reason || 'Visitor requested live support';
+  const urgency = handoff.urgency || 'medium';
+
+  wrap.innerHTML = `
+    <div class="ai-lead-form-title">Live Agent Request</div>
+    <p class="ai-lead-form-note">Share your details so admin can identify you and reply inside this chat or on WhatsApp.</p>
+
+    <input id="leadNameInput" type="text" placeholder="Your name"/>
+    <input id="leadWhatsappInput" type="tel" placeholder="WhatsApp number e.g. +254..."/>
+    <input id="leadEmailInput" type="email" placeholder="Email optional"/>
+    <select id="leadPreferredInput">
+      <option value="whatsapp">WhatsApp</option>
+      <option value="email">Email</option>
+      <option value="chat">This chat</option>
+    </select>
+    <textarea id="leadMessageInput" rows="3" placeholder="Short message for admin..."></textarea>
+
+    <button type="button" onclick="submitAssistantLeadCapture('${safeAttr(reason)}','${safeAttr(urgency)}')">Send Details to Admin →</button>
+    <p class="ai-lead-status" id="assistantLeadStatus">Your details will be sent to the admin dashboard.</p>
+  `;
+
+  messages.appendChild(wrap);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+async function submitAssistantLeadCapture(reason = 'Visitor requested live support', urgency = 'medium'){
+  const status = document.getElementById('assistantLeadStatus');
+  const name = document.getElementById('leadNameInput')?.value.trim() || '';
+  const whatsapp = document.getElementById('leadWhatsappInput')?.value.trim() || '';
+  const email = document.getElementById('leadEmailInput')?.value.trim() || '';
+  const preferred_contact = document.getElementById('leadPreferredInput')?.value || 'whatsapp';
+  const message = document.getElementById('leadMessageInput')?.value.trim() || '';
+
+  if(!name || !whatsapp || !message){
+    if(status){
+      status.style.color = 'var(--red)';
+      status.textContent = 'Name, WhatsApp number, and message are required.';
+    }
+    return;
+  }
+
+  if(status){
+    status.style.color = 'var(--muted)';
+    status.textContent = 'Sending your details to admin...';
+  }
+
+  try{
+    const response = await fetch('/api/lead', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        session_id: currentChatSessionId,
+        name,
+        whatsapp,
+        email,
+        message,
+        reason,
+        urgency,
+        preferred_contact
+      })
+    });
+
+    const result = await response.json();
+
+    if(!response.ok || !result.ok){
+      throw new Error(result.error || 'Could not send details');
+    }
+
+    if(status){
+      status.style.color = 'var(--green)';
+      status.textContent = 'Details sent successfully. Keep this chat open for admin replies.';
+    }
+
+    addAssistantMessage('Your details have been received. Admin can now identify this chat and reply here when available.', 'bot');
+    startLiveChatPolling();
+
+    const form = document.getElementById('assistantLeadFormWrap');
+    if(form) form.classList.add('submitted');
+  }catch(err){
+    console.warn('Lead capture failed:', err);
+    if(status){
+      status.style.color = 'var(--red)';
+      status.textContent = 'Could not send details. Please use WhatsApp directly or try again.';
+    }
+  }
+}
+
+function startLiveSupportFallback(question){
+  addAssistantMessage('I can connect you with admin. Please share your details in the form below so they can reply properly.', 'bot');
+  renderLeadCaptureForm({
+    reason: 'Visitor requested live support',
+    urgency: 'medium',
+    request_details: true
+  });
+}
 
 async function sendAssistantMessage(){
   const input = document.getElementById('aiInput');
@@ -438,6 +641,10 @@ async function sendAssistantMessage(){
     thinkingMessage.textContent = fallback;
     aiConversationHistory.push({ role:'assistant', content: fallback });
     aiConversationHistory = aiConversationHistory.slice(-10);
+
+    if(isLiveAgentRequest(question)){
+      startLiveSupportFallback(question);
+    }
   }
 
   messages.scrollTop = messages.scrollHeight;
@@ -698,15 +905,8 @@ function generateAssistantReply(question){
 
 document.addEventListener('DOMContentLoaded', function(){
   setTimeout(() => {
-    const head = document.querySelector('.ai-head');
-    if(head && !document.getElementById('newChatBtn')){
-      const btn = document.createElement('button');
-      btn.id = 'newChatBtn';
-      btn.textContent = '↻';
-      btn.title = 'Start new chat';
-      btn.onclick = resetAssistantChat;
-      head.appendChild(btn);
-    }
+    installAssistantControls();
+    setText('assistantStatus', 'Online assistant mode');
   }, 500);
 });
 
