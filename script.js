@@ -115,6 +115,7 @@ document.getElementById('emailInput').addEventListener('keydown', function(event
 // ── CMS CONTENT LOADER
 let cmsContacts = {};
 let publicStrategiesCache = [];
+let publicPackagesCache = [];
 let assistantConfig = {
   assistant_name: 'LHISKEY AI Assistant',
   status: 'offline',
@@ -478,6 +479,7 @@ function generateAssistantReply(question){
 document.addEventListener('DOMContentLoaded', function(){
   loadCMSContent();
   loadPublishedStrategies();
+  loadPublishedPackages();
   loadAssistantSettings();
 
   const aiInput = document.getElementById('aiInput');
@@ -491,6 +493,190 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 });
 
+
+
+
+/* ── PUBLIC SERVICES / PACKAGES v11 ── */
+async function loadPublishedPackages(){
+  try{
+    const { data, error } = await supabaseClient
+      .from('service_packages')
+      .select('id,title,category,price_label,description,features,button_label,sort_order')
+      .eq('is_published', true)
+      .order('sort_order', { ascending:true })
+      .order('created_at', { ascending:false })
+      .limit(12);
+
+    if(error){
+      console.warn('Packages load error:', error.message);
+      renderPublicPackages([]);
+      return;
+    }
+
+    publicPackagesCache = data || [];
+    renderPublicPackages(publicPackagesCache);
+  }catch(err){
+    console.warn('Packages failed:', err);
+    renderPublicPackages([]);
+  }
+}
+
+function renderPublicPackages(packages){
+  const container = document.getElementById('publicPackages');
+  if(!container) return;
+
+  const fallback = [
+    {
+      id:'',
+      title:'Forex Beginner Guidance',
+      category:'mentorship',
+      price_label:'Request quote',
+      description:'Beginner-friendly support for learning forex basics, risk management, market structure, and discipline.',
+      features:['Forex basics','Risk-first trading','Market structure introduction'],
+      button_label:'Request Guidance'
+    },
+    {
+      id:'',
+      title:'SMC / ICT Learning Pack',
+      category:'education',
+      price_label:'Request quote',
+      description:'Educational support for liquidity, order blocks, fair value gaps, and structure-based analysis.',
+      features:['Liquidity basics','Order blocks','Fair value gaps'],
+      button_label:'Request Learning Pack'
+    },
+    {
+      id:'',
+      title:'Bot / Tool Access Request',
+      category:'tools',
+      price_label:'Contact admin',
+      description:'Ask about available tools, bot documentation, setup support, and safe testing guidance.',
+      features:['Tool information','Setup request','Testing guidance'],
+      button_label:'Request Bot Info'
+    }
+  ];
+
+  const list = packages && packages.length ? packages : fallback;
+
+  container.innerHTML = list.map(pkg => {
+    const features = Array.isArray(pkg.features) ? pkg.features : [];
+    return `
+      <div class="package-public-card fade-up visible">
+        <div class="package-top">
+          <span>${safePublicHTML(pkg.category || 'service')}</span>
+          <strong>${safePublicHTML(pkg.price_label || 'Contact admin')}</strong>
+        </div>
+        <h3>${safePublicHTML(pkg.title || 'Service Package')}</h3>
+        <p>${safePublicHTML(pkg.description || '')}</p>
+        <ul>
+          ${features.slice(0,5).map(f => `<li>${safePublicHTML(f)}</li>`).join('')}
+        </ul>
+        <button class="btn-primary" onclick="selectPackageRequest('${safeAttr(pkg.id || '')}', '${safeAttr(pkg.title || 'General Request')}', '${safeAttr(pkg.category || 'general')}')">
+          ${safePublicHTML(pkg.button_label || 'Request Access')} →
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  document.querySelectorAll('.fade-up').forEach(el => {
+    if(typeof observer !== 'undefined') observer.observe(el);
+  });
+}
+
+function selectPackageRequest(packageId, packageName, requestType){
+  const idInput = document.getElementById('clientPackageId');
+  const nameInput = document.getElementById('clientPackageName');
+  const selected = document.getElementById('selectedPackageText');
+  const typeInput = document.getElementById('clientRequestTypeInput');
+
+  if(idInput) idInput.value = packageId || '';
+  if(nameInput) nameInput.value = packageName || 'General Request';
+  if(selected) selected.textContent = packageName || 'General Request';
+  if(typeInput && requestType) typeInput.value = mapPackageCategory(requestType);
+
+  const section = document.getElementById('request');
+  if(section) section.scrollIntoView({ behavior:'smooth' });
+}
+
+function mapPackageCategory(category){
+  const c = String(category || '').toLowerCase();
+  if(c.includes('mentor')) return 'mentorship';
+  if(c.includes('strategy')) return 'strategy';
+  if(c.includes('tool') || c.includes('bot')) return 'bot';
+  if(c.includes('consult')) return 'consultation';
+  return 'general';
+}
+
+async function submitClientRequest(){
+  const msg = document.getElementById('clientRequestMsg');
+
+  const payload = {
+    package_id: document.getElementById('clientPackageId')?.value || null,
+    package_name: document.getElementById('clientPackageName')?.value || 'General Request',
+    name: document.getElementById('clientNameInput')?.value.trim(),
+    whatsapp: document.getElementById('clientWhatsappInput')?.value.trim(),
+    email: document.getElementById('clientEmailInput')?.value.trim(),
+    preferred_contact: document.getElementById('clientPreferredInput')?.value || 'whatsapp',
+    request_type: document.getElementById('clientRequestTypeInput')?.value || 'general',
+    budget_range: document.getElementById('clientBudgetInput')?.value.trim(),
+    message: document.getElementById('clientMessageInput')?.value.trim()
+  };
+
+  if(!payload.name || !payload.whatsapp || !payload.message){
+    if(msg){
+      msg.style.color = 'var(--red)';
+      msg.textContent = 'Name, WhatsApp, and message are required.';
+    }
+    return;
+  }
+
+  if(msg){
+    msg.style.color = 'var(--muted)';
+    msg.textContent = 'Sending request...';
+  }
+
+  try{
+    const res = await fetch('/api/client-request', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await res.json();
+
+    if(!res.ok || !result.ok){
+      throw new Error(result.error || 'Request failed');
+    }
+
+    if(msg){
+      msg.style.color = 'var(--green)';
+      msg.textContent = 'Request sent successfully. The admin team will follow up.';
+    }
+
+    ['clientNameInput','clientWhatsappInput','clientEmailInput','clientBudgetInput','clientMessageInput'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.value = '';
+    });
+  }catch(err){
+    console.warn('Client request failed:', err);
+    if(msg){
+      msg.style.color = 'var(--red)';
+      msg.textContent = 'Could not send request. Please use WhatsApp or live chat.';
+    }
+  }
+}
+
+function safePublicHTML(value){
+  return String(value ?? '')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'","&#039;");
+}
+
+function safeAttr(value){
+  return safePublicHTML(value).replaceAll('\n',' ');
+}
 
 
 // ── LEAD CAPTURE FORM AFTER HANDOFF

@@ -18,6 +18,7 @@
     <li><a href="#why">Community</a></li>
     <li><a href="#risk">Risk</a></li>
     <li><a href="#join">Join</a></li>
+    <li><a href="#packages">Packages</a></li>
     <li><a href="#strategies">Strategies</a></li>
     <li><a href="#contact">Contact</a></li>
     <li><a href="admin.html">Admin</a></li>
@@ -184,6 +185,84 @@
         </div>
       </div>
     </div>
+  </div>
+</section>
+
+
+<!-- PACKAGES -->
+<section class="packages-section" id="packages">
+  <p class="section-tag">→ Services & Packages</p>
+  <h2 class="section-title fade-up">Choose Your Next Step</h2>
+  <p class="section-sub fade-up">
+    Request education, strategy support, bot/tool information, or direct consultation. Everything is handled with risk-first ethics — no guaranteed profit claims.
+  </p>
+  <div class="packages-grid" id="publicPackages">
+    <div class="package-public-card fade-up visible">
+      <h3>Loading packages...</h3>
+      <p>Please wait while we load available services.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CLIENT REQUEST -->
+<section class="client-request-section" id="request">
+  <p class="section-tag">→ Client Onboarding</p>
+  <h2 class="section-title fade-up">Request Access Or Support</h2>
+  <p class="section-sub fade-up">
+    Leave your details and the admin team will follow up. This form is for education, tools, support, and consultation requests only.
+  </p>
+
+  <div class="client-request-card fade-up">
+    <div class="request-selected">
+      <span>Selected package</span>
+      <strong id="selectedPackageText">General Request</strong>
+    </div>
+
+    <input type="hidden" id="clientPackageId"/>
+    <input type="hidden" id="clientPackageName"/>
+
+    <div class="request-grid">
+      <div>
+        <label for="clientNameInput">Name</label>
+        <input id="clientNameInput" type="text" placeholder="Your name"/>
+      </div>
+      <div>
+        <label for="clientWhatsappInput">WhatsApp</label>
+        <input id="clientWhatsappInput" type="tel" placeholder="+254..."/>
+      </div>
+      <div>
+        <label for="clientEmailInput">Email optional</label>
+        <input id="clientEmailInput" type="email" placeholder="you@email.com"/>
+      </div>
+      <div>
+        <label for="clientPreferredInput">Preferred contact</label>
+        <select id="clientPreferredInput">
+          <option value="whatsapp">WhatsApp</option>
+          <option value="call">Call</option>
+          <option value="email">Email</option>
+        </select>
+      </div>
+      <div>
+        <label for="clientRequestTypeInput">Request type</label>
+        <select id="clientRequestTypeInput">
+          <option value="mentorship">Mentorship / education</option>
+          <option value="strategy">Strategy support</option>
+          <option value="bot">Bot / tool access</option>
+          <option value="consultation">Consultation</option>
+          <option value="general">General support</option>
+        </select>
+      </div>
+      <div>
+        <label for="clientBudgetInput">Budget range optional</label>
+        <input id="clientBudgetInput" type="text" placeholder="Example: KSh 1,000 - 5,000"/>
+      </div>
+    </div>
+
+    <label for="clientMessageInput">Message</label>
+    <textarea id="clientMessageInput" rows="5" placeholder="Tell us what you need help with..."></textarea>
+
+    <button class="btn-primary request-btn" onclick="submitClientRequest()">Send Request →</button>
+    <p class="nl-disclaimer" id="clientRequestMsg">📊 Educational purposes only — not financial advice. No guaranteed profits.</p>
   </div>
 </section>
 
