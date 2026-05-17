@@ -26,6 +26,7 @@ let analyticsData = {};
 let liveChatSessions = [];
 let selectedLiveSessionId = null;
 let liveChatMessagesCache = [];
+let liveChatLeadsData = [];
 let currentChatFilter = 'open';
 let liveChatMessagesTimer = null;
 
@@ -1822,31 +1823,47 @@ function downloadLeadsCSV(){
 /* SUPPORT INBOX MODE */
 async function loadLiveChats(){
   const list = document.getElementById('liveSessionList');
-  if(list) list.innerHTML = '<p class="muted">Loading sessions...</p>';
+  if(list && !liveChatSessions.length) list.innerHTML = '<p class="muted">Loading support requests...</p>';
 
-  const { data: sessions, error } = await supabaseClient
-    .from('chat_sessions')
-    .select('*')
-    .order('updated_at', { ascending:false })
-    .limit(200);
+  const [
+    sessionsResult,
+    messagesResult,
+    leadsResult
+  ] = await Promise.allSettled([
+    supabaseClient
+      .from('chat_sessions')
+      .select('*')
+      .order('updated_at', { ascending:false })
+      .limit(250),
+    supabaseClient
+      .from('chat_messages')
+      .select('*')
+      .order('id', { ascending:false })
+      .limit(700),
+    supabaseClient
+      .from('visitor_leads')
+      .select('*')
+      .order('created_at', { ascending:false })
+      .limit(700)
+  ]);
 
-  if(error){
+  const sessionsPayload = sessionsResult.status === 'fulfilled' ? sessionsResult.value : {};
+  if(sessionsPayload.error){
     if(list) list.innerHTML = '<p class="muted">Live chat tables not ready or access blocked.</p>';
     return;
   }
 
-  liveChatSessions = sessions || [];
+  liveChatSessions = sessionsPayload.data || [];
 
-  const { data: messages } = await supabaseClient
-    .from('chat_messages')
-    .select('*')
-    .order('id', { ascending:false })
-    .limit(500);
+  const messagesPayload = messagesResult.status === 'fulfilled' ? messagesResult.value : {};
+  const leadsPayload = leadsResult.status === 'fulfilled' ? leadsResult.value : {};
 
-  liveChatMessagesCache = messages || [];
+  liveChatMessagesCache = messagesPayload.data || [];
+  liveChatLeadsData = leadsPayload.data || [];
 
   enrichLiveSessions();
   renderLiveSessions();
+  renderLiveInboxStats();
 
   if(selectedLiveSessionId){
     await loadLiveMessages();
@@ -1859,8 +1876,34 @@ function enrichLiveSessions(){
       .filter(m => m.session_id === session.id)
       .sort((a,b) => Number(b.id) - Number(a.id));
 
+    const relatedLeads = (liveChatLeadsData || [])
+      .filter(l => l.session_id === session.id)
+      .sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
     const latest = msgs[0] || null;
     const latestAdmin = msgs.find(m => m.author_type === 'admin') || null;
+    const latestLead = relatedLeads[0] || null;
+
+    const displayName =
+      latestLead?.name ||
+      session.visitor_name ||
+      session.visitor_label ||
+      'Website Visitor';
+
+    const displayPhone =
+      latestLead?.whatsapp ||
+      session.visitor_whatsapp ||
+      '';
+
+    const displayEmail =
+      latestLead?.email ||
+      session.visitor_email ||
+      '';
+
+    const requestReason =
+      latestLead?.reason ||
+      session.handoff_reason ||
+      (session.status === 'waiting_agent' ? 'Live agent request' : 'General chat');
 
     const needsReply =
       session.status !== 'closed' &&
@@ -1868,11 +1911,27 @@ function enrichLiveSessions(){
       (latest.author_type === 'visitor' || latest.author_type === 'system') &&
       (!latestAdmin || Number(latest.id) > Number(latestAdmin.id));
 
-    return { ...session, _latest: latest, _needsReply: !!needsReply };
+    const hasLeadDetails = !!(latestLead?.name || latestLead?.whatsapp || session.visitor_whatsapp);
+
+    return {
+      ...session,
+      _messages: msgs,
+      _lead: latestLead,
+      _latest: latest,
+      _needsReply: !!needsReply,
+      _displayName: displayName,
+      _displayPhone: displayPhone,
+      _displayEmail: displayEmail,
+      _requestReason: requestReason,
+      _hasLeadDetails: hasLeadDetails,
+      _messageCount: msgs.length
+    };
   });
 
   liveChatSessions.sort((a,b) => {
     if(a._needsReply !== b._needsReply) return a._needsReply ? -1 : 1;
+    if(a.status === 'waiting_agent' && b.status !== 'waiting_agent') return -1;
+    if(b.status === 'waiting_agent' && a.status !== 'waiting_agent') return 1;
     return new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at);
   });
 }
@@ -1883,6 +1942,31 @@ function setChatFilter(filter){
   const active = document.querySelector(`.filter-btn[data-filter="${filter}"]`);
   if(active) active.classList.add('active');
   renderLiveSessions();
+}
+
+function renderLiveInboxStats(){
+  const host = document.getElementById('liveSessionList')?.parentElement;
+  if(!host) return;
+
+  let stats = document.getElementById('liveInboxStats');
+  if(!stats){
+    stats = document.createElement('div');
+    stats.id = 'liveInboxStats';
+    stats.className = 'live-inbox-stats';
+    host.insertBefore(stats, document.getElementById('liveSessionList'));
+  }
+
+  const open = liveChatSessions.filter(s => s.status !== 'closed').length;
+  const unanswered = liveChatSessions.filter(s => s._needsReply).length;
+  const live = liveChatSessions.filter(s => s.status === 'waiting_agent' || s.status === 'live_agent').length;
+  const withPhone = liveChatSessions.filter(s => s._displayPhone).length;
+
+  stats.innerHTML = `
+    <div><span>Open</span><strong>${open}</strong></div>
+    <div><span>Unanswered</span><strong>${unanswered}</strong></div>
+    <div><span>Live Agent</span><strong>${live}</strong></div>
+    <div><span>With Phone</span><strong>${withPhone}</strong></div>
+  `;
 }
 
 function renderLiveSessions(){
@@ -1902,46 +1986,85 @@ function renderLiveSessions(){
   if(search){
     filtered = filtered.filter(session => {
       const text = [
-        session.visitor_name,
-        session.visitor_whatsapp,
-        session.visitor_email,
+        session._displayName,
+        session._displayPhone,
+        session._displayEmail,
         session.status,
-        session.handoff_reason,
-        session._latest?.content
+        session._requestReason,
+        session._latest?.content,
+        session._lead?.message
       ].join(' ').toLowerCase();
       return text.includes(search);
     });
   }
 
   if(filtered.length === 0){
-    list.innerHTML = '<p class="muted">No chats in this view.</p>';
+    list.innerHTML = '<div class="empty-inbox-table"><strong>No requests in this view.</strong><p>Try another filter or search term.</p></div>';
     return;
   }
 
-  list.innerHTML = filtered.map(session => {
-    const name = session.visitor_name || session.visitor_label || 'Website Visitor';
-    const initials = getInitials(name);
-    const latestText = session._latest ? session._latest.content : 'No messages yet';
-    const time = formatShortTime(session._latest?.created_at || session.updated_at || session.created_at);
-    const statusClass = session.status === 'closed' ? 'closed' : session._needsReply ? 'unanswered' : session.status;
+  list.innerHTML = `
+    <div class="support-request-table-wrap">
+      <table class="support-request-table">
+        <thead>
+          <tr>
+            <th>Client</th>
+            <th>Request / Latest Message</th>
+            <th>Phone</th>
+            <th>Status</th>
+            <th>Updated</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filtered.map(session => {
+            const name = session._displayName || 'Website Visitor';
+            const initials = getInitials(name);
+            const latestText = session._lead?.message || session._latest?.content || 'No message yet';
+            const time = formatShortTime(session._latest?.created_at || session.updated_at || session.created_at);
+            const phone = session._displayPhone || 'No phone';
+            const statusText = session._needsReply ? 'UNANSWERED' : (session.status || 'bot_mode');
+            const statusClass = session._needsReply ? 'unanswered' : (session.status || 'bot_mode');
+            const rowClass = [
+              session.id === selectedLiveSessionId ? 'active' : '',
+              session._needsReply ? 'needs-reply' : '',
+              session._hasLeadDetails ? 'has-details' : 'missing-details'
+            ].join(' ');
 
-    return `
-      <div class="wa-chat-card ${session.id === selectedLiveSessionId ? 'active' : ''} ${session._needsReply ? 'needs-reply' : ''}" onclick="selectLiveSession('${session.id}')">
-        <div class="wa-avatar">${escapeHTML(initials)}</div>
-        <div class="wa-chat-info">
-          <div class="wa-chat-top">
-            <strong>${escapeHTML(name)}</strong>
-            <span>${escapeHTML(time)}</span>
-          </div>
-          <div class="wa-chat-preview">${escapeHTML(latestText).slice(0, 80)}</div>
-          <div class="wa-chat-meta">
-            <span class="status-pill ${escapeHTML(statusClass)}">${session._needsReply ? 'UNANSWERED' : escapeHTML(session.status || 'bot_mode')}</span>
-            ${session.visitor_whatsapp ? `<span>${escapeHTML(session.visitor_whatsapp)}</span>` : '<span>No phone</span>'}
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
+            return `
+              <tr class="${rowClass}" data-sid="${escapeHTML(String(session.id))}">
+                <td>
+                  <div class="support-client-cell">
+                    <div class="wa-avatar small">${escapeHTML(initials)}</div>
+                    <div>
+                      <strong>${escapeHTML(name)}</strong>
+                      <span>${escapeHTML(session._displayEmail || 'Website chat')}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="support-message-cell">
+                    <strong>${escapeHTML(session._requestReason || 'General chat')}</strong>
+                    <p>${escapeHTML(String(latestText).slice(0, 140))}</p>
+                    <small>${Number(session._messageCount || 0)} messages</small>
+                  </div>
+                </td>
+                <td>${escapeHTML(phone)}</td>
+                <td>
+                  <span class="status-pill ${escapeHTML(statusClass)}">${escapeHTML(statusText)}</span>
+                  ${session._hasLeadDetails ? '<small class="detail-ok">Details saved</small>' : '<small class="detail-missing">No details</small>'}
+                </td>
+                <td>${escapeHTML(time)}</td>
+                <td>
+                  <button class="open-chat-btn" type="button" onclick="selectLiveSession('${escapeHTML(String(session.id))}')">Open</button>
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 async function selectLiveSession(sessionId){
@@ -1956,6 +2079,39 @@ async function selectLiveSession(sessionId){
   }, 3500);
 }
 
+
+function openSelectedClientWhatsapp(){
+  if(!selectedLiveSessionId) return showMessage('Select a client chat first.', 'red');
+
+  const session = liveChatSessions.find(s => s.id === selectedLiveSessionId);
+  const rawPhone = session?._displayPhone || session?.visitor_whatsapp || '';
+  const clean = String(rawPhone).replace(/[^\d]/g, '');
+
+  if(!clean){
+    showMessage('This client has no WhatsApp number saved. Ask them to submit details first.', 'red');
+    return;
+  }
+
+  const text = encodeURIComponent(`Hello ${session?._displayName || ''}, this is Emmanuel from LHISKEY KICK TRADES. I saw your request and I am here to assist you.`);
+  window.open(`https://wa.me/${clean}?text=${text}`, '_blank');
+}
+
+function ensureSelectedChatActionsV157(){
+  const statusBox = document.getElementById('liveChatStatus');
+  if(!statusBox) return;
+
+  let btn = document.getElementById('selectedWhatsappBtnV157');
+  if(!btn){
+    btn = document.createElement('button');
+    btn.id = 'selectedWhatsappBtnV157';
+    btn.type = 'button';
+    btn.className = 'ghost-btn selected-whatsapp-btn';
+    btn.textContent = 'WhatsApp Client';
+    btn.onclick = openSelectedClientWhatsapp;
+    statusBox.insertAdjacentElement('afterend', btn);
+  }
+}
+
 async function loadLiveMessages(){
   if(!selectedLiveSessionId) return;
 
@@ -1966,17 +2122,24 @@ async function loadLiveMessages(){
     .single();
 
   const session = freshSession || liveChatSessions.find(s => s.id === selectedLiveSessionId);
+  const enriched = liveChatSessions.find(s => s.id === selectedLiveSessionId);
 
-  document.getElementById('liveChatTitle').textContent = session?.visitor_name || session?.visitor_label || 'Website Visitor';
-  document.getElementById('liveChatMeta').textContent =
-    `WhatsApp: ${session?.visitor_whatsapp || 'Not provided'} · Email: ${session?.visitor_email || 'Not provided'} · Started: ${formatDate(session?.created_at)}`;
+  const displayName = enriched?._displayName || session?.visitor_name || session?.visitor_label || 'Website Visitor';
+  const displayPhone = enriched?._displayPhone || session?.visitor_whatsapp || 'Not provided';
+  const displayEmail = enriched?._displayEmail || session?.visitor_email || 'Not provided';
+  const requestReason = enriched?._requestReason || session?.handoff_reason || 'General chat';
+
+  document.getElementById('liveChatTitle').textContent = displayName;
+  document.getElementById('liveChatMeta').innerHTML =
+    `<span><strong>Phone:</strong> ${escapeHTML(displayPhone)}</span> · <span><strong>Email:</strong> ${escapeHTML(displayEmail)}</span> · <span><strong>Request:</strong> ${escapeHTML(requestReason)}</span> · <span><strong>Started:</strong> ${formatDate(session?.created_at)}</span>`;
 
   const statusBox = document.getElementById('liveChatStatus');
   if(statusBox){
-    const enriched = liveChatSessions.find(s => s.id === selectedLiveSessionId);
     statusBox.textContent = enriched?._needsReply ? 'UNANSWERED' : (session?.status || 'unknown');
     statusBox.className = 'support-status ' + (enriched?._needsReply ? 'unanswered' : (session?.status || ''));
   }
+
+  ensureSelectedChatActionsV157();
 
   const { data, error } = await supabaseClient
     .from('chat_messages')

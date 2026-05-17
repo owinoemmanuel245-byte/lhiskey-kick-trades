@@ -578,3 +578,178 @@ td:nth-child(2){color:var(--text);}
 @media(max-width:650px){
   .analytics-grid{grid-template-columns:1fr;}
 }
+
+
+
+/* ── ADMIN SUPPORT INBOX TABLE v15.7 ── */
+.support-inbox-helper-v15-7{
+  color:var(--green);
+}
+
+.live-inbox-stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+  margin:12px 0;
+}
+
+.live-inbox-stats div{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  padding:10px;
+}
+
+.live-inbox-stats span{
+  display:block;
+  color:var(--muted);
+  font-size:.72rem;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+
+.live-inbox-stats strong{
+  display:block;
+  color:var(--green);
+  font-family:'DM Mono',monospace;
+  font-size:1.15rem;
+  margin-top:4px;
+}
+
+.support-request-table-wrap{
+  width:100%;
+  overflow:auto;
+  border:1px solid var(--border);
+  background:var(--card);
+  max-height:620px;
+}
+
+.support-request-table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:900px;
+}
+
+.support-request-table th{
+  position:sticky;
+  top:0;
+  z-index:2;
+  text-align:left;
+  background:var(--bg);
+  color:var(--muted);
+  font-size:.72rem;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  padding:12px;
+  border-bottom:1px solid var(--border2);
+}
+
+.support-request-table td{
+  padding:12px;
+  border-bottom:1px solid var(--border);
+  vertical-align:middle;
+  color:var(--text);
+  font-size:.84rem;
+}
+
+.support-request-table tr.needs-reply{
+  background:rgba(0,255,135,0.06);
+}
+
+.support-request-table tr.active{
+  outline:2px solid rgba(0,255,135,0.4);
+  outline-offset:-2px;
+}
+
+.support-request-table tr.missing-details{
+  opacity:.9;
+}
+
+.support-client-cell{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:190px;
+}
+
+.wa-avatar.small{
+  width:34px;
+  height:34px;
+  font-size:.75rem;
+}
+
+.support-client-cell strong{
+  display:block;
+  color:var(--text);
+  margin-bottom:4px;
+}
+
+.support-client-cell span{
+  color:var(--muted);
+  font-size:.72rem;
+}
+
+.support-message-cell strong{
+  display:block;
+  color:var(--green);
+  margin-bottom:5px;
+}
+
+.support-message-cell p{
+  color:var(--muted);
+  line-height:1.45;
+  margin:0 0 4px;
+  max-width:390px;
+}
+
+.support-message-cell small,
+.detail-ok,
+.detail-missing{
+  display:block;
+  margin-top:6px;
+  font-size:.68rem;
+  color:var(--muted);
+}
+
+.detail-ok{
+  color:var(--green);
+}
+
+.detail-missing{
+  color:var(--red);
+}
+
+.open-chat-btn{
+  border:1px solid rgba(0,255,135,0.35);
+  background:rgba(0,255,135,0.1);
+  color:var(--green);
+  padding:8px 12px;
+  border-radius:999px;
+  cursor:pointer;
+  font-weight:800;
+}
+
+.open-chat-btn:hover{
+  background:rgba(0,255,135,0.18);
+}
+
+.empty-inbox-table{
+  border:1px solid var(--border);
+  background:var(--card);
+  padding:22px;
+  color:var(--muted);
+}
+
+.selected-whatsapp-btn{
+  margin-left:8px;
+}
+
+#liveChatMeta span{
+  display:inline-block;
+  margin-bottom:4px;
+}
+
+@media(max-width:900px){
+  .live-inbox-stats{
+    grid-template-columns:repeat(2,1fr);
+  }
+}
