@@ -1288,6 +1288,60 @@ function buildShowcasePolicyReply(message = '') {
 }
 
 
+
+function buildDetailedForexEducationReply(message = '') {
+  const q = normalizeText(message);
+
+  if (q.includes('roadmap') || q.includes('learning path') || q.includes('how do i start forex')) {
+    return 'A beginner should learn Forex step by step: 1) Forex basics: pairs, pips, lots, spread, leverage and margin. 2) Chart basics: candlesticks, timeframes, trends, ranges, support and resistance. 3) Market structure: bullish, bearish, ranges, BOS, CHoCH, highs and lows. 4) Risk management: stop loss, lot size, drawdown, daily loss limits and account protection. 5) Liquidity and supply/demand: previous highs/lows, equal highs/lows, supply zones and demand zones. 6) Trading psychology: fear, greed, patience, discipline and revenge trading. 7) Demo practice. 8) Journaling. 9) One tested strategy. 10) Small size and slow growth.\\n\\n📊 Educational purposes only — not financial advice.';
+  }
+
+  if (q.includes('risk management') || q.includes('manage risk') || q.includes('stop loss') || q.includes('drawdown')) {
+    return 'Risk management is the most important part of Forex trading. It means controlling how much can be lost before entering a trade. A serious trader defines stop loss, lot size, risk percentage, invalidation and daily loss limit before trading. Core rules: use a stop loss, avoid overtrading, avoid revenge trading, respect drawdown, use proper lot size, avoid blind news trading, and accept losses as normal. A professional trader asks: If I am wrong, how much do I lose? Where is my stop loss? Is the risk worth the reward? Am I following a plan or forcing a trade?\\n\\n📊 Educational purposes only — not financial advice.';
+  }
+
+  if (q.includes('pips') || q.includes('lot size') || q.includes('lots') || q.includes('spread') || q.includes('margin')) {
+    return 'A pip is a small unit of price movement. For most pairs, one pip is usually 0.0001. For JPY pairs, one pip is usually 0.01. Lot size means trade size; a bigger lot size increases both profit and loss per pip. Leverage lets a trader control a bigger position with smaller capital, but it increases risk. Margin is the money the broker holds to keep a trade open. Spread is the difference between buy and sell price. Scalpers must watch spread because high spread can make small trades harder to profit from.\\n\\n📊 Educational purposes only — not financial advice.';
+  }
+
+  if (q.includes('leverage')) {
+    return 'Leverage allows a trader to control a bigger trade position than the cash they personally put up. It can multiply profits but also multiply losses. A beginner using high leverage with large lot sizes can lose money very fast. Good traders do not ask only how much they can open; they ask how much they can lose if they are wrong, then calculate lot size, margin, stop loss and account protection.\\n\\n📊 Educational purposes only — not financial advice.';
+  }
+
+  if (q.includes('market structure') || q.includes('bos') || q.includes('choch') || q.includes('structure')) {
+    return 'Market structure is how price forms highs and lows. Bullish structure forms higher highs and higher lows. Bearish structure forms lower lows and lower highs. A range moves sideways between support and resistance. BOS means Break of Structure, when price breaks an important high or low in the trend direction. CHoCH means Change of Character and may suggest behavior is changing. Internal structure is smaller movement inside a larger trend; external structure is the bigger swing framework. Structure should be combined with liquidity, supply/demand, confirmation and risk management.\\n\\n📊 Educational purposes only — not financial advice.';
+  }
+
+  if (q.includes('liquidity') || q.includes('equal highs') || q.includes('equal lows')) {
+    return 'Liquidity refers to areas where many orders are likely sitting. Common liquidity areas include previous highs, previous lows, equal highs, equal lows, support/resistance zones, session highs/lows and obvious stop-loss areas. A liquidity sweep happens when price moves above a high or below a low to collect orders, then reacts or reverses. A trader should ask: Where are stops? Where are equal highs/lows? Has price swept liquidity? Did price react after the sweep?\\n\\n📊 Educational purposes only — not financial advice.';
+  }
+
+  if (q.includes('ict') || q.includes('smc') || q.includes('smart money') || q.includes('order block') || q.includes('fvg') || q.includes('fair value gap')) {
+    return 'SMC and ICT are methods of reading price action through liquidity, market structure, order blocks, fair value gaps, supply and demand and institutional-style behavior. SMC means Smart Money Concepts. ICT focuses heavily on liquidity, time, market structure, fair value gaps, displacement, premium/discount, session behavior and institutional order flow ideas. Key terms include liquidity sweep, order block, FVG, BOS, CHoCH, displacement, supply, demand, premium and discount. SMC/ICT is not magic and does not guarantee profits; it must be used with confirmation, patience and strict risk management.\\n\\n📊 Educational purposes only — not financial advice.';
+  }
+
+  if (q.includes('psychology') || q.includes('mindset') || q.includes('emotions') || q.includes('revenge') || q.includes('fear') || q.includes('greed')) {
+    return 'Trading psychology is the emotional side of trading. Many traders lose because they cannot control fear, greed, impatience, revenge trading and overconfidence. Common problems include FOMO, revenge trading, overconfidence after wins, fear of losing, moving stop loss and chasing candles. A disciplined trader waits for a setup, accepts losses, protects the account, trades less but better and journals mistakes. Strategy, risk management and psychology must work together.\\n\\n📊 Educational purposes only — not financial advice.';
+  }
+
+  if (q.includes('beginners lose') || q.includes('why traders lose')) {
+    return 'Beginners often lose because they trade without structure and risk control. Common mistakes include big lot sizes, overtrading, revenge trading, no stop loss, following signals blindly, chasing candles, blind news trading and risking too much on one trade. Psychology also matters: fear, greed and impatience make beginners break rules. The solution is to learn slowly, risk small, practice on demo, journal trades, focus on one strategy and protect the account first.\\n\\n📊 Educational purposes only — not financial advice.';
+  }
+
+  if (q.includes('why price moves') || q.includes('how price moves') || q.includes('price action')) {
+    return 'Forex price moves because of buyers and sellers, but it is also affected by supply and demand, interest rates, economic news, market sentiment, liquidity, market structure and institutional order flow. A serious trader asks: Where is liquidity? What is the market structure? Is price trending or ranging? Where are supply and demand zones? Is there high-impact news? Where is invalidation? How much am I risking?\\n\\n📊 Educational purposes only — not financial advice.';
+  }
+
+  return 'Forex trading means buying one currency while selling another currency at the same time. Traders trade pairs such as EUR/USD, GBP/USD, USD/JPY, GBP/JPY and XAU/USD. The first currency is the base currency and the second is the quote currency. Forex prices move because of supply and demand, interest rates, inflation, central bank decisions, news, sentiment, liquidity and institutional activity. A serious trader studies structure, liquidity, supply/demand, risk management and psychology before trading. Beginners usually lose because they overtrade, use large lot sizes, ignore stop loss, revenge trade or follow signals blindly.\\n\\n📊 Educational purposes only — not financial advice.';
+}
+
+function classifyDetailedForexEducation(message = '') {
+  const q = normalizeText(message);
+  const words = ['forex','ict','smc','smart money','liquidity','market structure','risk management','manage risk','roadmap','pips','pip','lot size','leverage','spread','margin','psychology','beginners lose','price action','order block','fvg','fair value gap','bos','choch'];
+  return words.some(w => q.includes(w));
+}
+
+
 function buildPlatformPaymentReply() {
   return 'LHISKEY KICK TRADES uses a manual payment-proof system. A client should only make payment after admin confirms the package, service, product, consultation, or access request. After payment, the client submits proof through the Payment Proof form with name, WhatsApp number, payment purpose, amount, payment method, transaction/reference code, and optional screenshot/PDF proof. Admin reviews the payment manually. Access is released only after admin verifies and approves the payment.\n\nPayments are for education, tools, testing access, consultation, support, or locked product access. Payments do not guarantee trading profits.';
 }
