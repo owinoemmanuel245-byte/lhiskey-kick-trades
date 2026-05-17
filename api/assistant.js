@@ -535,6 +535,13 @@ function parseClaudeJSON(rawText) {
 // ─────────────────────────────────────────────────────────────────
 
 function generateFallbackResponse({ message, knowledgeItems, packageItems, contacts, strategies }) {
+
+  const platformKnowledgeIntent = classifyPlatformKnowledge(message);
+  if (platformKnowledgeIntent === 'payment_info') return buildPlatformPaymentReply();
+  if (platformKnowledgeIntent === 'access_info') return buildPlatformAccessReply(message);
+  if (platformKnowledgeIntent === 'policy_info') return buildPlatformPolicyReply(message);
+  if (platformKnowledgeIntent === 'not_public') return buildShowcasePolicyReply(message);
+
   const decision = classifyIntentFallback(message);
   const reply    = buildFallbackReply({ message, decision, contacts, strategies, knowledgeItems, packageItems });
   return {
@@ -551,6 +558,25 @@ function generateFallbackResponse({ message, knowledgeItems, packageItems, conta
  * Education check runs FIRST — prevents "I need help with liquidity"
  * from being misclassified as a support request.
  */
+
+function classifyPlatformKnowledge(message) {
+  const q = normalizeText(message);
+  const paymentWords = ['payment proof','submit proof','after i pay','after payment','payment work','payments work','how do payments','mpesa','m-pesa','bank payment','reference code','transaction code'];
+  if (paymentWords.some(x => q.includes(x))) return 'payment_info';
+
+  const accessWords = ['unlock a package','unlock package','client access','access portal','access code','release code','share my access code','can i share','sharing code','another device','same code','access revoked','revoked access','anti sharing','anti-sharing'];
+  if (accessWords.some(x => q.includes(x))) return 'access_info';
+
+  const policyWords = ['refund','get a refund','refund policy','financial advice','is this financial advice','risk disclaimer','trading risk','guaranteed profit','guaranteed profits','privacy','terms of use'];
+  if (policyWords.some(x => q.includes(x))) return 'policy_info';
+
+  const notPublicWords = ['why are the bots not public','bots not public','strategies not public','strategy not public','why not public','not released','not available yet'];
+  if (notPublicWords.some(x => q.includes(x))) return 'not_public';
+
+  return '';
+}
+
+
 function classifyIntentFallback(message) {
   const q      = normalizeText(message);
   const tokens = tokenize(q);
@@ -1222,6 +1248,10 @@ ${list}
 function buildShowcasePolicyReply(message = '') {
   const q = normalizeText(message);
 
+  if (q.includes('not public') || q.includes('not released') || q.includes('available yet')) {
+    return 'LHISKEY KICK TRADES does not rush to publish untested bots or full strategy rules. Strategies, bots, tools, and private systems must be researched, tested, reviewed, and structured properly before release. This protects clients from blindly copying incomplete rules or using risky automation that could damage trading accounts. Some products may appear as Research Stage, In Testing, Private Beta, Coming Soon, Preview Only, or Locked until they are ready.\n\n📊 Educational/testing purposes only — not financial advice.';
+  }
+
   if (q.includes('private beta')) {
     return (
       'Private beta means a bot, strategy, tool, or assistant is being tested with limited access before public release. At LHISKEY KICK TRADES, private beta does not mean the product is fully released or ready for live-account use. It means the system is still being checked for stability, safety, risk behaviour, and user experience. Pricing will be communicated soon when the beta structure and access terms are finalized.
@@ -1256,6 +1286,31 @@ function buildShowcasePolicyReply(message = '') {
     '📊 Educational/testing purposes only — not financial advice.'
   );
 }
+
+
+function buildPlatformPaymentReply() {
+  return 'LHISKEY KICK TRADES uses a manual payment-proof system. A client should only make payment after admin confirms the package, service, product, consultation, or access request. After payment, the client submits proof through the Payment Proof form with name, WhatsApp number, payment purpose, amount, payment method, transaction/reference code, and optional screenshot/PDF proof. Admin reviews the payment manually. Access is released only after admin verifies and approves the payment.\n\nPayments are for education, tools, testing access, consultation, support, or locked product access. Payments do not guarantee trading profits.';
+}
+
+function buildPlatformAccessReply(message = '') {
+  const q = normalizeText(message);
+  if (q.includes('share') || q.includes('sharing') || q.includes('another device') || q.includes('revoked')) {
+    return 'Access codes are issued for one client only. Each code is linked to the client’s WhatsApp number and the first device/session used to unlock the package. If the same code is used from another device or by another person, the system may block the attempt, alert admin, or revoke access after repeated sharing attempts. If a genuine client changes phone or browser, they should contact admin for a device reset.';
+  }
+  return 'To unlock a package, the client first clicks Access on a locked product, follows admin-confirmed payment instructions, submits payment proof, and waits for admin approval. After approval, admin releases the package and the system generates a unique access code. The client then opens the Client Access Portal and enters the same WhatsApp number used during payment plus the access code. The approved private content, delivery notes, and private links then unlock for that client.';
+}
+
+function buildPlatformPolicyReply(message = '') {
+  const q = normalizeText(message);
+  if (q.includes('refund')) {
+    return 'Refunds, replacements, access adjustments, or support reviews are handled manually by admin. Eligibility depends on the type of service, whether private digital access has already been released, and the issue raised by the client. If there is a payment or access issue, the client should contact admin with their name, WhatsApp number, payment reference, and explanation.';
+  }
+  if (q.includes('financial advice') || q.includes('advice')) {
+    return 'No. LHISKEY KICK TRADES does not provide personal financial advice, investment advice, guaranteed signals, or direct instructions to buy or sell any market. All content, AI responses, private materials, strategy notes, tools, and consultations are for educational, informational, support, or testing purposes only. Clients must use independent judgment and proper risk management.';
+  }
+  return 'Trading forex, gold, indices, crypto, commodities, and other financial markets involves risk. Losses can happen, especially when leverage, poor risk management, emotional trading, or untested systems are used. LHISKEY KICK TRADES does not guarantee profits, account growth, payouts, or trading success. Never trade money you cannot afford to lose.';
+}
+
 
 function buildContactReply(contacts) {
   const w1    = String(contacts.whatsapp1 || FALLBACK_WHATSAPP);
