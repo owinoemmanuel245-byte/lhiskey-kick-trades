@@ -69,7 +69,7 @@ const SUPABASE_RETRY_DELAYS  = [400];    // ms delays between retries (one retry
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const VALID_URGENCIES = new Set(['low', 'medium', 'high']);
-const VALID_INTENTS   = new Set(['education', 'contact', 'bot_info', 'packages', 'strategy_info', 'about', 'general']);
+const VALID_INTENTS   = new Set(['education', 'contact', 'bot_info', 'packages', 'strategy_info', 'showcase_info', 'about', 'general']);
 
 // ─────────────────────────────────────────────────────────────────
 //  MAIN HANDLER
@@ -369,8 +369,8 @@ function buildSystemPrompt({ knowledgeItems, packageItems, contacts, strategies,
 ## WHAT YOU CAN DO
 - Explain forex concepts: SMC, ICT, liquidity, order blocks, FVG, market structure, candlesticks
 - Explain risk management, trading psychology, discipline
-- Describe ${brand} services, packages, bots, tools, published strategies, and subscriptions
-- Clearly separate Services/Packages from Published Trading Strategies
+- Describe ${brand} services, packages, bots, tools, published strategies, roadmap items, and subscriptions
+- Clearly separate Services/Packages from Published Trading Strategies and Safe Showcase items
 - Provide contact information
 - Route visitors to a live admin when appropriate
 
@@ -387,12 +387,14 @@ function buildSystemPrompt({ knowledgeItems, packageItems, contacts, strategies,
 - Visitor directly asks for a human agent, admin, or live support
 
 Do NOT set handoff=true for general help questions, educational requests,
-"I don't understand X", package questions, strategy-library questions, or curiosity about the platform.
+"I don't understand X", package questions, strategy-library questions, safe-showcase questions, or curiosity about the platform.
 
-## PACKAGE VS STRATEGY ROUTING
+## PACKAGE VS STRATEGY VS SHOWCASE ROUTING
 - If the visitor asks about price, cost, fees, packages, packs, mentorship, consultation, access, subscription, offers, or how to request a service: answer from PUBLISHED SERVICES / PACKAGES.
-- If the visitor asks about published trading strategies, strategy rules, strategy notes, setup logic, or the strategy library: answer from PUBLISHED STRATEGIES or education context.
+- If the visitor asks about published trading strategies, strategy rules, strategy notes, setup logic, or the Strategy Library: answer from PUBLISHED STRATEGIES or education context.
+- If the visitor asks about bots under testing, private beta, early access, testing waitlist, safe showcase, coming soon tools, or whether a bot is available: explain the Safe Showcase / Early Access policy.
 - If the visitor asks "How much is the SMC pack?" this is a package/pricing question, not an SMC education question.
+- If the visitor asks "What is SMC?" or "Explain SMC and liquidity" this is an education question.
 
 ## TONE
 Professional, warm, clear Kenyan-English. Concise but thorough.
@@ -407,7 +409,7 @@ Respond ONLY with a single valid JSON object — no markdown, no preamble, no ex
   "handoff":        false,
   "handoff_reason": "",
   "urgency":        "low",
-  "intent":         "education|contact|bot_info|packages|strategy_info|about|general"
+  "intent":         "education|contact|bot_info|packages|strategy_info|showcase_info|about|general"
 }
 If handoff is true fill handoff_reason (concise, admin-facing) and urgency ("low"|"medium"|"high").`;
 
@@ -554,21 +556,19 @@ function classifyIntentFallback(message) {
   const tokens = tokenize(q);
 
   /*
-   * IMPORTANT ORDER:
-   * 1. Packages/pricing/services first.
-   * 2. Published strategy-library intent second.
-   * 3. Education third.
-   *
-   * This prevents:
-   * "How much is the SMC pack?" → education
-   * "Do you have strategy packages?" → education
+   * Order matters:
+   * 1. Package/pricing/service intent
+   * 2. Safe showcase / early access / bot availability intent
+   * 3. Published strategy-library intent
+   * 4. Contact / bot / about
+   * 5. Education
    */
 
   const pricingOrPackagePhrases = [
     'how much', 'what price', 'what is the price', 'price of', 'cost of',
     'how do i pay', 'where do i pay', 'payment for', 'request access',
     'get access', 'book consultation', 'need consultation', 'one on one',
-    '1 on 1', 'sign up', 'subscribe'
+    '1 on 1', 'sign up', 'subscribe', 'smc pack', 'ict pack'
   ];
 
   const packageTerms = [
@@ -583,12 +583,24 @@ function classifyIntentFallback(message) {
     return { type: 'packages', handoff: false };
   }
 
+  const showcasePhrases = [
+    'gold scalping bot', 'can i test the bot', 'test the bot',
+    'bot available', 'is the bot available', 'private beta',
+    'early access', 'testing waitlist', 'join testing', 'safe showcase',
+    'pre launch', 'prelaunch', 'coming soon', 'in testing',
+    'research stage', 'available yet', 'public download'
+  ];
+
+  if (phraseMatch(q, showcasePhrases)) {
+    return { type: 'showcase_info', handoff: false };
+  }
+
   const strategyLibraryPhrases = [
     'your strategy', 'your strategies', 'published strategy', 'published strategies',
     'strategy library', 'trading strategy', 'trading strategies',
     'show strategy', 'show strategies', 'available strategy', 'available strategies',
     'tell me about your strategy', 'tell me about your strategies',
-    'strategy notes', 'strategy rules'
+    'strategy notes', 'strategy rules', 'is the smc strategy available'
   ];
 
   if (phraseMatch(q, strategyLibraryPhrases) || tokenMatch(tokens, ['strategies'], 1)) {
@@ -599,7 +611,7 @@ function classifyIntentFallback(message) {
   if (tokenMatch(tokens, contactTerms, 1)) return { type: 'contact', handoff: false };
 
   const botTerms = ['bot', 'ea', 'expert', 'advisor', 'mt5', 'mt4', 'robot', 'algo', 'software', 'tool'];
-  if (tokenMatch(tokens, botTerms, 1)) return { type: 'bot_info', handoff: false };
+  if (tokenMatch(tokens, botTerms, 1)) return { type: 'showcase_info', handoff: false };
 
   if (
     phraseMatch(q, ['lhiskey', 'kick trades', 'about your', 'who are you', 'what is this']) ||
@@ -652,6 +664,7 @@ function buildFallbackReply({ message, decision, contacts, strategies, knowledge
 
   if (decision.type === 'packages') return buildPackagesReply(packageItems, message);
   if (decision.type === 'strategy_info') return buildStrategiesReply(strategies, message);
+  if (decision.type === 'showcase_info') return buildShowcasePolicyReply(message);
   if (decision.type === 'contact')  return buildContactReply(contacts);
 
   const kb = scoreKB(knowledgeItems, message, { minScore: 7 });
@@ -1074,8 +1087,8 @@ function buildPackagesReply(packageItems, message = '') {
   if (!Array.isArray(packageItems) || packageItems.length === 0) {
     return (
       'LHISKEY KICK TRADES offers forex education, strategy support, bot/tool information, ' +
-      'and consultation requests. Please check the Services/Packages section on the website ' +
-      'or ask for live support for the latest available options.'
+      'and consultation requests. Pricing will be communicated soon once the service/access structure is finalized. ' +
+      'Please check the Services/Packages section or ask for live support for the latest options.'
     );
   }
 
@@ -1096,7 +1109,6 @@ function buildPackagesReply(packageItems, message = '') {
       if (features.includes(token)) score += 2;
     }
 
-    // Aliases that make visitor wording feel human.
     if ((query.includes('smc') || query.includes('ict')) && (title.includes('smc') || description.includes('smc') || features.includes('smc'))) score += 14;
     if ((query.includes('beginner') || query.includes('new trader') || query.includes('start')) && title.includes('beginner')) score += 10;
     if ((query.includes('bot') || query.includes('tool') || query.includes('ea') || query.includes('mt5')) && (title.includes('bot') || title.includes('tool') || category.includes('tool'))) score += 12;
@@ -1116,7 +1128,7 @@ function buildPackagesReply(packageItems, message = '') {
 
   const list = listSource.map((pkg, i) => {
     const title = sanitizeText(String(pkg.title || 'Service Package'), 120);
-    const price = sanitizeText(String(pkg.price_label || 'Contact admin'), 80);
+    const price = sanitizeText(String(pkg.price_label || 'Pricing will be communicated soon'), 100);
     const desc  = sanitizeText(String(pkg.description || ''), 240);
     const features = Array.isArray(pkg.features) && pkg.features.length
       ? '
@@ -1135,16 +1147,17 @@ ${desc}${features}`;
 ${list}
 
 ` +
-    'To proceed, open the Services/Packages section on the website, choose the package, ' +
-    'and submit the request form. You can also ask for a live agent if you need personal help choosing.'
+    'Pricing will be communicated soon where it is not yet finalized. To proceed, open the Services/Packages section, choose the package, and submit the request form. You can also ask for a live agent if you need help choosing.'
   );
 }
 
 function buildStrategiesReply(strategies, message = '') {
   if (!Array.isArray(strategies) || strategies.length === 0) {
     return (
-      'LHISKEY KICK TRADES can publish trading strategy notes in the Strategy Library. ' +
-      'For now, check the public Strategies section on the website or ask for live support if you need help choosing a strategy path. ' +
+      'LHISKEY KICK TRADES has not fully published public strategy notes yet. Strategies will be shared only after review and testing so visitors do not blindly copy risky rules. ' +
+      'For now, you can follow the Safe Showcase / Early Access section for updates, or request information through the form.
+
+' +
       '📊 Educational purposes only — not financial advice.'
     );
   }
@@ -1203,6 +1216,44 @@ ${list}
 
 ' +
     '📊 Educational purposes only — not financial advice.'
+  );
+}
+
+function buildShowcasePolicyReply(message = '') {
+  const q = normalizeText(message);
+
+  if (q.includes('private beta')) {
+    return (
+      'Private beta means a bot, strategy, tool, or assistant is being tested with limited access before public release. At LHISKEY KICK TRADES, private beta does not mean the product is fully released or ready for live-account use. It means the system is still being checked for stability, safety, risk behaviour, and user experience. Pricing will be communicated soon when the beta structure and access terms are finalized.
+
+' +
+      '📊 Educational/testing purposes only — not financial advice.'
+    );
+  }
+
+  if (q.includes('test') || q.includes('testing') || q.includes('early access')) {
+    return (
+      'Bot testing at LHISKEY KICK TRADES is controlled carefully. Untested bots are not released publicly because trading automation can be risky without proper controls and forward testing. Visitors can request early access or join the testing waitlist, but approval is not automatic. Pricing will be communicated soon when the access structure is ready.
+
+' +
+      '📊 Educational/testing purposes only — not financial advice.'
+    );
+  }
+
+  if (q.includes('gold') || q.includes('scalping bot') || q.includes('bot')) {
+    return (
+      'The Gold Scalping Bot is a planned LHISKEY KICK TRADES trading tool focused on XAUUSD/Gold scalping education, testing, and risk-controlled automation support. It is currently in testing and is not available for public download yet. It is not a guaranteed profit system and should not replace proper trading knowledge or risk management. Pricing will be communicated soon after testing and final access structure are complete.
+
+' +
+      '📊 Educational/testing purposes only — not financial advice.'
+    );
+  }
+
+  return (
+    'LHISKEY KICK TRADES uses a Safe Showcase approach: bots, strategies, and tools can be shown as Research Stage, In Testing, Private Beta, Coming Soon, or Available Later without exposing untested downloads or risky rules. Visitors can request information through the Early Access form. Pricing will be communicated soon when each item is ready.
+
+' +
+    '📊 Educational/testing purposes only — not financial advice.'
   );
 }
 
