@@ -10,50 +10,91 @@ const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_EMTHLqW_AybbMqz2gQqdRg_-1NMTgK-
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 // ── TICKER DATA
+
+// ── FLOATING MARKET TICKER + VOLUME v15.2
 const pairs = [
-  {p:'XAUUSD',v:'2,341.40',c:'+0.34%',up:true},
-  {p:'GBPJPY',v:'196.840',c:'+0.18%',up:true},
-  {p:'EURUSD',v:'1.08421',c:'-0.09%',up:false},
-  {p:'USDJPY',v:'151.220',c:'+0.22%',up:true},
-  {p:'GBPUSD',v:'1.27650',c:'+0.15%',up:true},
-  {p:'US30',v:'39,241',c:'-0.41%',up:false},
-  {p:'BTCUSD',v:'68,420',c:'+1.23%',up:true},
-  {p:'AUDCAD',v:'0.89340',c:'-0.07%',up:false},
-  {p:'USDCHF',v:'0.90120',c:'+0.11%',up:true},
-  {p:'NZDUSD',v:'0.60980',c:'-0.14%',up:false},
+  {p:'XAUUSD', v:2341.40, d:2, c:+0.34, up:true,  vol:4.20},
+  {p:'GBPJPY', v:196.840, d:3, c:+0.18, up:true,  vol:8.90},
+  {p:'EURUSD', v:1.08421, d:5, c:-0.09, up:false, vol:12.40},
+  {p:'USDJPY', v:151.220, d:3, c:+0.22, up:true,  vol:9.10},
+  {p:'GBPUSD', v:1.27650, d:5, c:+0.15, up:true,  vol:7.30},
+  {p:'US30',   v:39241,   d:0, c:-0.41, up:false, vol:2.10},
+  {p:'BTCUSD', v:68420,   d:0, c:+1.23, up:true,  vol:15.80},
+  {p:'USDCHF', v:0.90120, d:5, c:+0.11, up:true,  vol:5.70},
+  {p:'AUDCAD', v:0.89340, d:5, c:-0.07, up:false, vol:3.60},
+  {p:'NZDUSD', v:0.60980, d:5, c:-0.14, up:false, vol:4.40},
 ];
+
+function formatTickerPrice(item){
+  const value = Number(item.v);
+  if(item.d === 0) return value.toLocaleString('en-US', { maximumFractionDigits:0 });
+  return value.toLocaleString('en-US', {
+    minimumFractionDigits:item.d,
+    maximumFractionDigits:item.d
+  });
+}
+
+function formatTickerChange(item){
+  const sign = Number(item.c) >= 0 ? '+' : '';
+  return `${sign}${Number(item.c).toFixed(2)}%`;
+}
+
+function formatTickerVolume(item){
+  return `Vol ${Number(item.vol || 0).toFixed(2)}K`;
+}
+
 function buildTicker(){
-  const t=document.getElementById('ticker');
+  const t = document.getElementById('ticker');
   if(!t) return;
 
-  const all=[...pairs,...pairs];
-  t.innerHTML=all.map(i=>`
-    <span class="ticker-item">
+  const all = [...pairs, ...pairs, ...pairs];
+  t.innerHTML = all.map(i => `
+    <span class="market-ticker-item">
       <span class="ticker-pair">${i.p}</span>
-      <span class="ticker-price">${i.v}</span>
-      <span class="${i.up?'tick-up':'tick-dn'}">${i.c}</span>
+      <span class="ticker-price">${formatTickerPrice(i)}</span>
+      <span class="ticker-volume">${formatTickerVolume(i)}</span>
+      <span class="${i.up ? 'tick-up' : 'tick-dn'}">${formatTickerChange(i)}</span>
     </span>
   `).join('');
 }
 
-if(document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', buildTicker);
-}else{
+function startTicker(){
   buildTicker();
+  setInterval(wobbleTicker, 2800);
 }
 
-// ── LIVE PRICE WOBBLE
-function wobble(){
-  const prices = document.querySelectorAll('.ticker-price');
-  if(!prices.length) return;
-  prices.forEach((el,i)=>{
-    const base=parseFloat(el.textContent.replace(',',''));
-    const delta=(Math.random()-.5)*0.002*base;
-    const newVal=base+delta;
-    el.textContent=base>1000?newVal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):newVal.toFixed(5);
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', startTicker);
+}else{
+  startTicker();
+}
+
+function wobbleTicker(){
+  const prices = document.querySelectorAll('.market-ticker-item .ticker-price');
+  const volumes = document.querySelectorAll('.market-ticker-item .ticker-volume');
+
+  prices.forEach((el, i) => {
+    const source = pairs[i % pairs.length];
+    const base = Number(source.v);
+    const delta = (Math.random() - 0.5) * 0.0018 * base;
+    const newVal = Math.max(0, base + delta);
+
+    el.textContent = source.d === 0
+      ? newVal.toLocaleString('en-US', { maximumFractionDigits:0 })
+      : newVal.toLocaleString('en-US', {
+          minimumFractionDigits:source.d,
+          maximumFractionDigits:source.d
+        });
+  });
+
+  volumes.forEach((el, i) => {
+    const source = pairs[i % pairs.length];
+    const delta = (Math.random() - 0.5) * 0.42;
+    const newVol = Math.max(0.10, Number(source.vol || 1) + delta);
+    el.textContent = `Vol ${newVol.toFixed(2)}K`;
   });
 }
-setInterval(wobble,2800);
+
 
 // ── SCROLL ANIMATIONS
 const observer=new IntersectionObserver(entries=>{

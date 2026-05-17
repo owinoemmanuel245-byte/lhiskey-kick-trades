@@ -1407,3 +1407,102 @@
   .trust-grid{grid-template-columns:1fr;}
   .trust-card{min-height:auto;}
 }
+
+
+
+/* ── FLOATING MARKET TICKER + VOLUME v15.2 ── */
+.floating-market-ticker,
+.ticker-wrap{
+  position:fixed !important;
+  top:64px !important;
+  left:0 !important;
+  right:0 !important;
+  width:100% !important;
+  height:38px !important;
+  z-index:9998 !important;
+  background:rgba(5, 8, 12, 0.96) !important;
+  border-top:1px solid rgba(0,255,135,0.15) !important;
+  border-bottom:1px solid rgba(0,255,135,0.25) !important;
+  overflow:hidden !important;
+  display:block !important;
+  pointer-events:none !important;
+  backdrop-filter:blur(12px) !important;
+}
+
+.market-ticker-track,
+.ticker-track{
+  display:flex !important;
+  align-items:center !important;
+  width:max-content !important;
+  height:100% !important;
+  white-space:nowrap !important;
+  animation:marketTickerMove 45s linear infinite !important;
+}
+
+.market-ticker-item,
+.ticker-item{
+  display:inline-flex !important;
+  align-items:center !important;
+  gap:9px !important;
+  height:100% !important;
+  padding:0 26px !important;
+  font-family:'DM Mono', monospace !important;
+  font-size:.74rem !important;
+  border-right:1px solid rgba(255,255,255,0.08) !important;
+}
+
+.ticker-pair{
+  color:var(--muted) !important;
+  letter-spacing:.08em !important;
+  font-weight:700 !important;
+}
+
+.ticker-price{
+  color:var(--text) !important;
+  font-weight:700 !important;
+}
+
+.ticker-volume{
+  color:#9aa4b2 !important;
+  font-size:.68rem !important;
+  opacity:.9 !important;
+}
+
+.tick-up{
+  color:var(--green) !important;
+  font-weight:700 !important;
+}
+
+.tick-dn{
+  color:var(--red) !important;
+  font-weight:700 !important;
+}
+
+@keyframes marketTickerMove{
+  from{ transform:translateX(0); }
+  to{ transform:translateX(-33.333%); }
+}
+
+/* Push hero down so the fixed ticker does not cover the top content */
+.hero{
+  padding-top:190px !important;
+}
+
+@media(max-width:700px){
+  .floating-market-ticker,
+  .ticker-wrap{
+    top:62px !important;
+    height:36px !important;
+  }
+
+  .market-ticker-item,
+  .ticker-item{
+    padding:0 18px !important;
+    font-size:.68rem !important;
+    gap:7px !important;
+  }
+
+  .ticker-volume{
+    font-size:.62rem !important;
+  }
+}
