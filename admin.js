@@ -1866,7 +1866,8 @@ async function loadLiveChats(){
   renderLiveInboxStats();
 
   if(selectedLiveSessionId){
-    await loadLiveMessages();
+    document.querySelector('.support-chat-panel')?.classList.add('chat-open');
+  await loadLiveMessages();
   }
 }
 
@@ -2163,25 +2164,72 @@ async function loadLiveMessages(){
     return;
   }
 
-  if(!data || data.length === 0){
-    box.innerHTML = '<div class="empty-chat"><strong>No messages yet</strong></div>';
+  const leadCard = buildSelectedLeadCard(enriched);
+  const messageList = (data || []).map(msg => buildSupportMessageBubble(msg)).join('');
+
+  if((!data || data.length === 0) && !leadCard){
+    box.innerHTML = '<div class="empty-chat"><strong>No messages yet</strong><p>This client has not sent a message in this session.</p></div>';
     return;
   }
 
-  box.innerHTML = data.map(msg => {
-    const cls = msg.author_type || 'system';
-    return `
-      <div class="wa-message-row ${escapeHTML(cls)}">
-        <div class="wa-bubble ${escapeHTML(cls)}">
-          <div class="wa-label">${escapeHTML(labelAuthor(msg.author_type))}</div>
-          <div class="wa-text">${escapeHTML(msg.content || '')}</div>
-          <div class="wa-time">${formatShortTime(msg.created_at)}</div>
-        </div>
-      </div>
-    `;
-  }).join('');
+  box.innerHTML = `
+    ${leadCard}
+    <div class="support-chat-date-pill">Conversation</div>
+    ${messageList || '<div class="empty-chat small"><strong>No chat messages yet</strong></div>'}
+  `;
 
   box.scrollTop = box.scrollHeight;
+}
+
+function buildSelectedLeadCard(session){
+  const lead = session?._lead;
+  if(!lead) return '';
+
+  const name = lead.name || session?._displayName || 'Client';
+  const whatsapp = lead.whatsapp || session?._displayPhone || 'Not provided';
+  const email = lead.email || session?._displayEmail || 'Not provided';
+  const preferred = lead.preferred_contact || 'Not provided';
+  const reason = lead.reason || session?._requestReason || 'Live support request';
+  const message = lead.message || 'No request message submitted.';
+
+  return `
+    <div class="selected-client-request-card">
+      <div class="request-card-top">
+        <span>CLIENT REQUEST</span>
+        <strong>${escapeHTML(name)}</strong>
+      </div>
+      <div class="request-card-grid">
+        <p><b>WhatsApp:</b> ${escapeHTML(whatsapp)}</p>
+        <p><b>Email:</b> ${escapeHTML(email)}</p>
+        <p><b>Preferred:</b> ${escapeHTML(preferred)}</p>
+        <p><b>Reason:</b> ${escapeHTML(reason)}</p>
+      </div>
+      <div class="request-card-message">${escapeHTML(message)}</div>
+    </div>
+  `;
+}
+
+function buildSupportMessageBubble(msg){
+  const cls = msg.author_type || 'system';
+  const author = labelAuthor(msg.author_type);
+  const isAdmin = cls === 'admin';
+  const isBot = cls === 'bot';
+  const isSystem = cls === 'system';
+
+  return `
+    <div class="wa-message-row ${escapeHTML(cls)}">
+      <div class="wa-bubble ${escapeHTML(cls)}">
+        <div class="wa-label">${escapeHTML(author)}</div>
+        <div class="wa-text">${escapeHTML(msg.content || '').replace(/\n/g, '<br>')}</div>
+        <div class="wa-time">
+          ${formatShortTime(msg.created_at)}
+          ${isAdmin ? '<span class="sent-check">✓✓</span>' : ''}
+          ${isBot ? '<span class="bot-tag">BOT</span>' : ''}
+          ${isSystem ? '<span class="system-tag">SYS</span>' : ''}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function labelAuthor(author){
@@ -2219,7 +2267,7 @@ async function sendAdminReply(){
   input.value = '';
   await loadLiveChats();
   await loadLiveMessages();
-  showMessage('Reply sent to visitor.', 'green');
+  showMessage('Reply sent to this client.', 'green');
 }
 
 async function markSelectedLive(){
@@ -2431,3 +2479,20 @@ function ensureKnowledgeCategories(){
     .map(([value, label]) => `<option value="${value}">${label}</option>`)
     .join('');
 }
+
+
+
+function adminReplyInputEnterV159(){
+  const input = document.getElementById('adminReplyInput');
+  if(!input || input.dataset.enterBound === 'true') return;
+  input.dataset.enterBound = 'true';
+
+  input.addEventListener('keydown', e => {
+    if(e.key === 'Enter' && !e.shiftKey){
+      e.preventDefault();
+      sendAdminReply();
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', adminReplyInputEnterV159);
