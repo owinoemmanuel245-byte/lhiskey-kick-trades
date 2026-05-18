@@ -1282,3 +1282,10 @@ td:nth-child(2){color:var(--text);}
 #tab-livechat .wa-chat-row-v158.has-unread:hover{
   background:rgba(0,255,135,0.095);
 }
+
+
+
+/* ── ADMIN INBOX HARD REPAIR v16.2 ── */
+#tab-livechat .panel-head .actions .ghost-btn{
+  white-space:nowrap;
+}

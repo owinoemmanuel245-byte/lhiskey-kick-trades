@@ -2960,3 +2960,139 @@ function resetLiveChatPanelV161(message = 'No client selected'){
 document.addEventListener('DOMContentLoaded', () => {
   setupLiveInboxAutoRefreshV161();
 });
+
+
+
+/* ── ADMIN INBOX HARD REPAIR v16.2 ── */
+let useBackendInboxFallbackV162 = false;
+
+async function fetchBackendInboxV162(){
+  const sessionResult = await supabaseClient.auth.getSession();
+  const token = sessionResult?.data?.session?.access_token;
+
+  if(!token){
+    throw new Error('No admin auth token found. Please log out and log in again.');
+  }
+
+  const res = await fetch('/api/admin-live-inbox', {
+    method:'GET',
+    headers:{ Authorization:`Bearer ${token}` }
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if(!res.ok || !data.ok){
+    throw new Error(data.error || data.details || 'Backend inbox failed.');
+  }
+
+  return data;
+}
+
+async function forceBackendInboxRefreshV162(){
+  try{
+    showMessage('Loading inbox through backend...', 'muted');
+    const payload = await fetchBackendInboxV162();
+
+    liveChatSessions = payload.sessions || [];
+    liveChatMessagesCache = payload.messages || [];
+    liveChatLeadsData = payload.leads || [];
+
+    buildOrphanLeadSessionsV162();
+    enrichLiveSessions();
+    renderLiveSessions();
+    renderLiveInboxStats();
+
+    if(selectedLiveSessionId && liveChatSessions.some(s => s.id === selectedLiveSessionId)){
+      await loadLiveMessages();
+    }
+
+    showMessage(`Backend inbox loaded: ${liveChatSessions.length} chats/leads.`, 'green');
+  }catch(err){
+    console.error('[forceBackendInboxRefreshV162]', err);
+    showMessage('Backend refresh failed: ' + err.message, 'red');
+  }
+}
+
+function buildOrphanLeadSessionsV162(){
+  const sessionIds = new Set((liveChatSessions || []).map(s => String(s.id)));
+
+  const orphanLeadSessions = (liveChatLeadsData || [])
+    .filter(l => !l.session_id || !sessionIds.has(String(l.session_id)))
+    .map(l => ({
+      id:`lead_${l.id}`,
+      _isLeadOnly:true,
+      _leadOnlyId:l.id,
+      status:'lead_only',
+      source:l.source || 'website_ai_assistant',
+      visitor_label:l.name || 'Lead Request',
+      visitor_name:l.name || 'Lead Request',
+      visitor_whatsapp:l.whatsapp || '',
+      visitor_email:l.email || '',
+      handoff_reason:l.reason || 'Lead request without chat session',
+      created_at:l.created_at,
+      updated_at:l.created_at
+    }));
+
+  liveChatSessions = [...(liveChatSessions || []), ...orphanLeadSessions]
+    .filter(s => !isHiddenChatV161?.(s.id));
+}
+
+const previousLoadLiveChatsV162 = typeof loadLiveChats === 'function' ? loadLiveChats : null;
+
+loadLiveChats = async function(){
+  const list = document.getElementById('liveSessionList');
+  if(list && !liveChatSessions.length){
+    list.innerHTML = '<p class="muted">Loading client chats...</p>';
+  }
+
+  // First try browser Supabase loading.
+  if(previousLoadLiveChatsV162){
+    try{
+      await previousLoadLiveChatsV162();
+    }catch(err){
+      console.warn('[browser inbox load failed]', err);
+    }
+  }
+
+  const hasAny = Array.isArray(liveChatSessions) && liveChatSessions.length > 0;
+  const hasLeads = Array.isArray(liveChatLeadsData) && liveChatLeadsData.length > 0;
+
+  // If browser-side loading returns nothing, use secure backend fallback.
+  if(!hasAny && !hasLeads){
+    try{
+      const payload = await fetchBackendInboxV162();
+      liveChatSessions = payload.sessions || [];
+      liveChatMessagesCache = payload.messages || [];
+      liveChatLeadsData = payload.leads || [];
+
+      buildOrphanLeadSessionsV162();
+      enrichLiveSessions();
+      renderLiveSessions();
+      renderLiveInboxStats();
+
+      if(selectedLiveSessionId && liveChatSessions.some(s => s.id === selectedLiveSessionId)){
+        await loadLiveMessages();
+      }
+    }catch(err){
+      console.error('[backend inbox fallback failed]', err);
+      if(list){
+        list.innerHTML = `<div class="wa-empty-inbox"><strong>Inbox could not load.</strong><p>${escapeHTML(err.message || 'Check SUPABASE_SERVICE_ROLE_KEY and admin login.')}</p></div>`;
+      }
+    }
+  }
+};
+
+function clearHiddenChatsV162(){
+  localStorage.removeItem('lhiskey_hidden_chat_ids_v161');
+  showMessage('Hidden chats cleared. Reloading inbox...', 'green');
+  loadLiveChats();
+}
+
+function debugInboxStateV162(){
+  console.table({
+    sessions: liveChatSessions?.length || 0,
+    messages: liveChatMessagesCache?.length || 0,
+    leads: liveChatLeadsData?.length || 0,
+    hidden: (JSON.parse(localStorage.getItem('lhiskey_hidden_chat_ids_v161') || '[]')).length
+  });
+}
