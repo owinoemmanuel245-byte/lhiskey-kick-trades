@@ -2974,7 +2974,7 @@ async function fetchBackendInboxV162(){
     throw new Error('No admin auth token found. Please log out and log in again.');
   }
 
-  const res = await fetch('/api/admin-live-inbox', {
+  const res = await fetch('/api/lead?admin_inbox=1', {
     method:'GET',
     headers:{ Authorization:`Bearer ${token}` }
   });
