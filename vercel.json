@@ -1,0 +1,9 @@
+{
+  "rewrites": [
+    { "source": "/api/chat-poll", "destination": "/api/lead?action=chat-poll" },
+    { "source": "/api/client-request", "destination": "/api/lead?action=client-request" },
+    { "source": "/api/early-access", "destination": "/api/lead?action=early-access" },
+    { "source": "/api/payment-proof", "destination": "/api/lead?action=payment-proof" },
+    { "source": "/api/client-access", "destination": "/api/lead?action=client-access" }
+  ]
+}

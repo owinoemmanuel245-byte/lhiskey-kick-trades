@@ -671,7 +671,7 @@ async function pollLiveChatMessages(){
   if(!currentChatSessionId) return;
 
   try{
-    const response = await fetch(`/api/chat-poll?session_id=${encodeURIComponent(currentChatSessionId)}&after_id=${liveChatLastMessageId}`);
+    const response = await fetch(`/api/lead?action=chat-poll&session_id=${encodeURIComponent(currentChatSessionId)}&after_id=${liveChatLastMessageId}`);
     const result = await response.json();
 
     if(!response.ok) return;
