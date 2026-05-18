@@ -1263,7 +1263,7 @@ td:nth-child(2){color:var(--text);}
 
 
 
-/* ── INBOX CLEANUP + AUTO REFRESH v16 ── */
+/* ── LIVE CHAT SESSION FIX v16.1 ── */
 #tab-livechat .panel-head .actions{
   flex-wrap:wrap;
   gap:8px;
@@ -1273,18 +1273,6 @@ td:nth-child(2){color:var(--text);}
   background:rgba(255,75,75,0.12);
   border:1px solid rgba(255,75,75,0.35);
   color:var(--red);
-}
-
-#tab-livechat .wa-inbox-tabs{
-  flex-wrap:wrap;
-}
-
-#tab-livechat .wa-inbox-tabs button{
-  position:relative;
-}
-
-#tab-livechat .wa-chat-row-v158 .wa-row-bottom-v158 small:first-child{
-  text-transform:capitalize;
 }
 
 #tab-livechat .wa-chat-row-v158.has-unread{

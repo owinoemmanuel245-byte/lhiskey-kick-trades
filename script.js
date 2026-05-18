@@ -533,6 +533,16 @@ async function submitAssistantLeadCapture(reason = 'Visitor requested live suppo
       throw new Error(result.error || 'Could not send details');
     }
 
+    if(result.session_id){
+      currentChatSessionId = result.session_id;
+      localStorage.setItem('lhiskey_chat_session_id', currentChatSessionId);
+    }
+
+    if(result.message_id){
+      liveChatLastMessageId = Math.max(Number(result.message_id || 0), Number(liveChatLastMessageId || 0));
+      localStorage.setItem('lhiskey_chat_last_id', String(liveChatLastMessageId));
+    }
+
     if(status){
       status.style.color = 'var(--green)';
       status.textContent = 'Details sent successfully. Keep this chat open for admin replies.';
