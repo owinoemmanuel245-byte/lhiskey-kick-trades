@@ -3,6 +3,10 @@ const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_EMTHLqW_AybbMqz2gQqdRg_-1NMTgK-
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 export default async function handler(request, response) {
+  if (request.method === "GET" && request.query?.admin_inbox === "1") {
+    return handleAdminInboxRequest(request, response);
+  }
+
   if (request.method !== "POST") {
     return response.status(405).json({ ok:false, error: "Method not allowed" });
   }
