@@ -1,0 +1,13 @@
+# LHISKEY KICK TRADES — Vercel Function Limit Cleanup
+# These files are old/debug/extra API routes and should not be deployed as Serverless Functions.
+
+api/admin-live-inbox.js
+api/debug-gemini.js
+api/debug-sessions.js
+api/debug-intent.js
+api/assistant-health.js
+
+# Optional old experimental API files, if they exist
+api/test*.js
+api/debug*.js
+api/health*.js
