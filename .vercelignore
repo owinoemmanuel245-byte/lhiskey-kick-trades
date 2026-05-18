@@ -1,13 +1,37 @@
-# LHISKEY KICK TRADES — Vercel Function Limit Cleanup
-# These files are old/debug/extra API routes and should not be deployed as Serverless Functions.
+# LHISKEY KICK TRADES — HARD VERCEL FUNCTION CLEANUP v16.5
+# Purpose: stop Vercel Hobby from counting old/debug/asset files as Serverless Functions.
 
+# Keep ONLY the real live API files in deployment.
+# Ignore accidental API asset folders.
+api/assets/**
+api/assets/
+
+# Ignore old/admin fallback route that was moved into api/lead.js
 api/admin-live-inbox.js
+
+# Ignore all debug/test/health API routes
+api/debug*.js
+api/*debug*.js
+api/test*.js
+api/*test*.js
+api/health*.js
+api/*health*.js
+api/assistant-health.js
+api/debug-openai.js
 api/debug-gemini.js
 api/debug-sessions.js
 api/debug-intent.js
-api/assistant-health.js
 
-# Optional old experimental API files, if they exist
-api/test*.js
-api/debug*.js
-api/health*.js
+# Ignore backup/old duplicate files if any exist
+api/*.bak.js
+api/*.backup.js
+api/*.old.js
+api/*copy*.js
+api/*Copy*.js
+api/*unused*.js
+api/*temp*.js
+api/*tmp*.js
+
+# Ignore common junk files
+.DS_Store
+Thumbs.db
