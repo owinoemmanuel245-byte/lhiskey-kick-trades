@@ -737,6 +737,8 @@
             <button class="ghost-btn" onclick="loadLiveChats()">Refresh</button>
             <button class="ghost-btn" onclick="markSelectedLive()">Take Over</button>
             <button class="danger-btn" onclick="closeSelectedChat()">Close Chat</button>
+            <button class="danger-btn" onclick="deleteSelectedChatV16()">Delete Chat</button>
+            <button class="ghost-btn" onclick="archiveOldBotChatsV16()">Hide Old Bot Chats</button>
           </div>
         </div>
 
@@ -747,6 +749,7 @@
               <button class="filter-btn" data-filter="unanswered" onclick="setChatFilter('unanswered')">Unanswered</button>
               <button class="filter-btn" data-filter="closed" onclick="setChatFilter('closed')">Closed</button>
               <button class="filter-btn" data-filter="all" onclick="setChatFilter('all')">All</button>
+              <button class="filter-btn" data-filter="archived" onclick="setChatFilter('archived')">Archived</button>
             </div>
 
             <input class="support-search" id="liveSearchInput" placeholder="Search name, phone, message..." oninput="renderLiveSessions()"/>

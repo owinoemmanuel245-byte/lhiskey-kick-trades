@@ -1260,3 +1260,37 @@ td:nth-child(2){color:var(--text);}
     max-width:92%;
   }
 }
+
+
+
+/* ── INBOX CLEANUP + AUTO REFRESH v16 ── */
+#tab-livechat .panel-head .actions{
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+#tab-livechat .panel-head .actions .danger-btn{
+  background:rgba(255,75,75,0.12);
+  border:1px solid rgba(255,75,75,0.35);
+  color:var(--red);
+}
+
+#tab-livechat .wa-inbox-tabs{
+  flex-wrap:wrap;
+}
+
+#tab-livechat .wa-inbox-tabs button{
+  position:relative;
+}
+
+#tab-livechat .wa-chat-row-v158 .wa-row-bottom-v158 small:first-child{
+  text-transform:capitalize;
+}
+
+#tab-livechat .wa-chat-row-v158.has-unread{
+  background:rgba(0,255,135,0.055);
+}
+
+#tab-livechat .wa-chat-row-v158.has-unread:hover{
+  background:rgba(0,255,135,0.095);
+}

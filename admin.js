@@ -2496,3 +2496,405 @@ function adminReplyInputEnterV159(){
 }
 
 document.addEventListener('DOMContentLoaded', adminReplyInputEnterV159);
+
+
+
+/* ── INBOX CLEANUP + AUTO REFRESH v16 ── */
+let liveInboxAutoRefreshTimerV16 = null;
+let liveInboxLoadingV16 = false;
+
+function isLiveChatTabActiveV16(){
+  return document.getElementById('tab-livechat')?.classList.contains('active');
+}
+
+function setupLiveInboxAutoRefreshV16(){
+  if(liveInboxAutoRefreshTimerV16) clearInterval(liveInboxAutoRefreshTimerV16);
+
+  liveInboxAutoRefreshTimerV16 = setInterval(async () => {
+    if(isLiveChatTabActiveV16() && !liveInboxLoadingV16){
+      await loadLiveChats();
+    }
+  }, 5000);
+}
+
+function stopLiveInboxAutoRefreshV16(){
+  if(liveInboxAutoRefreshTimerV16){
+    clearInterval(liveInboxAutoRefreshTimerV16);
+    liveInboxAutoRefreshTimerV16 = null;
+  }
+}
+
+const originalSwitchTabV16 = typeof switchTab === 'function' ? switchTab : null;
+switchTab = function(name){
+  if(originalSwitchTabV16) originalSwitchTabV16(name);
+
+  if(name === 'livechat'){
+    setupLiveInboxAutoRefreshV16();
+    loadLiveChats();
+  }
+};
+
+async function loadLiveChats(){
+  const list = document.getElementById('liveSessionList');
+  if(list && !liveChatSessions.length){
+    list.innerHTML = '<p class="muted">Loading client chats...</p>';
+  }
+
+  if(liveInboxLoadingV16) return;
+  liveInboxLoadingV16 = true;
+
+  try{
+    const [sessionsResult, messagesResult, leadsResult] = await Promise.allSettled([
+      supabaseClient
+        .from('chat_sessions')
+        .select('*')
+        .order('updated_at', { ascending:false })
+        .limit(500),
+      supabaseClient
+        .from('chat_messages')
+        .select('*')
+        .order('id', { ascending:false })
+        .limit(1200),
+      supabaseClient
+        .from('visitor_leads')
+        .select('*')
+        .order('created_at', { ascending:false })
+        .limit(1200)
+    ]);
+
+    const sessionsPayload = sessionsResult.status === 'fulfilled' ? sessionsResult.value : {};
+    if(sessionsPayload.error){
+      if(list) list.innerHTML = '<p class="muted">Live chat tables not ready or access blocked.</p>';
+      return;
+    }
+
+    const messagesPayload = messagesResult.status === 'fulfilled' ? messagesResult.value : {};
+    const leadsPayload = leadsResult.status === 'fulfilled' ? leadsResult.value : {};
+
+    liveChatSessions = sessionsPayload.data || [];
+    liveChatMessagesCache = messagesPayload.data || [];
+    liveChatLeadsData = leadsPayload.data || [];
+
+    enrichLiveSessions();
+    renderLiveSessions();
+    renderLiveInboxStats();
+
+    if(selectedLiveSessionId){
+      await loadLiveMessages();
+    }
+  }catch(err){
+    console.error('[loadLiveChats v16]', err);
+  }finally{
+    liveInboxLoadingV16 = false;
+  }
+}
+
+function enrichLiveSessions(){
+  liveChatSessions = liveChatSessions.map(session => {
+    const msgs = (liveChatMessagesCache || [])
+      .filter(m => m.session_id === session.id)
+      .sort((a,b) => Number(b.id) - Number(a.id));
+
+    const relatedLeads = (liveChatLeadsData || [])
+      .filter(l => l.session_id === session.id)
+      .sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+    const latest = msgs[0] || null;
+    const latestAdmin = msgs.find(m => m.author_type === 'admin') || null;
+    const latestLead = relatedLeads[0] || null;
+
+    const unreadCount = latestAdmin
+      ? msgs.filter(m => (m.author_type === 'visitor' || m.author_type === 'system') && Number(m.id) > Number(latestAdmin.id)).length
+      : msgs.filter(m => m.author_type === 'visitor' || m.author_type === 'system').length;
+
+    const displayName =
+      latestLead?.name ||
+      session.visitor_name ||
+      session.visitor_label ||
+      'Website Visitor';
+
+    const displayPhone =
+      latestLead?.whatsapp ||
+      session.visitor_whatsapp ||
+      '';
+
+    const displayEmail =
+      latestLead?.email ||
+      session.visitor_email ||
+      '';
+
+    const requestReason =
+      latestLead?.reason ||
+      session.handoff_reason ||
+      (session.status === 'waiting_agent' ? 'Live agent request' : 'General chat');
+
+    const needsReply =
+      session.status !== 'closed' &&
+      session.status !== 'archived' &&
+      unreadCount > 0 &&
+      latest &&
+      (latest.author_type === 'visitor' || latest.author_type === 'system');
+
+    const hasLeadDetails = !!(latestLead?.name || latestLead?.whatsapp || session.visitor_whatsapp);
+
+    return {
+      ...session,
+      _messages: msgs,
+      _lead: latestLead,
+      _latest: latest,
+      _latestAdmin: latestAdmin,
+      _unreadCount: unreadCount,
+      _needsReply: !!needsReply,
+      _displayName: displayName,
+      _displayPhone: displayPhone,
+      _displayEmail: displayEmail,
+      _requestReason: requestReason,
+      _hasLeadDetails: hasLeadDetails,
+      _messageCount: msgs.length
+    };
+  });
+
+  liveChatSessions.sort((a,b) => {
+    if((a.status === 'archived') !== (b.status === 'archived')) return a.status === 'archived' ? 1 : -1;
+    if((a._unreadCount > 0) !== (b._unreadCount > 0)) return a._unreadCount > 0 ? -1 : 1;
+    if(a._needsReply !== b._needsReply) return a._needsReply ? -1 : 1;
+    if(a.status === 'waiting_agent' && b.status !== 'waiting_agent') return -1;
+    if(b.status === 'waiting_agent' && a.status !== 'waiting_agent') return 1;
+    return new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at);
+  });
+}
+
+function renderLiveInboxStats(){
+  const host = document.getElementById('liveSessionList')?.parentElement;
+  if(!host) return;
+
+  let stats = document.getElementById('liveInboxStats');
+  if(!stats){
+    stats = document.createElement('div');
+    stats.id = 'liveInboxStats';
+    stats.className = 'wa-inbox-tabs';
+    host.insertBefore(stats, document.getElementById('liveSessionList'));
+  }
+
+  const visibleSessions = liveChatSessions.filter(s => s.status !== 'archived');
+  const all = visibleSessions.length;
+  const unread = visibleSessions.filter(s => Number(s._unreadCount || 0) > 0).length;
+  const open = visibleSessions.filter(s => s.status !== 'closed').length;
+  const closed = visibleSessions.filter(s => s.status === 'closed').length;
+  const archived = liveChatSessions.filter(s => s.status === 'archived').length;
+
+  stats.innerHTML = `
+    <button type="button" class="${currentChatFilter === 'all' ? 'active' : ''}" onclick="setChatFilter('all')">All <span>${all}</span></button>
+    <button type="button" class="${currentChatFilter === 'unanswered' ? 'active' : ''}" onclick="setChatFilter('unanswered')">Unread <span>${unread}</span></button>
+    <button type="button" class="${currentChatFilter === 'open' ? 'active' : ''}" onclick="setChatFilter('open')">Open <span>${open}</span></button>
+    <button type="button" class="${currentChatFilter === 'closed' ? 'active' : ''}" onclick="setChatFilter('closed')">Closed <span>${closed}</span></button>
+    <button type="button" class="${currentChatFilter === 'archived' ? 'active' : ''}" onclick="setChatFilter('archived')">Archived <span>${archived}</span></button>
+  `;
+}
+
+function setChatFilter(filter){
+  currentChatFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelector(`.filter-btn[data-filter="${filter}"]`)?.classList.add('active');
+  renderLiveSessions();
+}
+
+function renderLiveSessions(){
+  const list = document.getElementById('liveSessionList');
+  if(!list) return;
+
+  const searchInput = document.getElementById('liveSearchInput');
+  const search = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+  let filtered = liveChatSessions.filter(session => {
+    if(currentChatFilter === 'open') return session.status !== 'closed' && session.status !== 'archived';
+    if(currentChatFilter === 'unanswered') return session.status !== 'archived' && (Number(session._unreadCount || 0) > 0 || session._needsReply);
+    if(currentChatFilter === 'closed') return session.status === 'closed';
+    if(currentChatFilter === 'archived') return session.status === 'archived';
+    if(currentChatFilter === 'all') return session.status !== 'archived';
+    return session.status !== 'archived';
+  });
+
+  if(search){
+    filtered = filtered.filter(session => {
+      const text = [
+        session._displayName,
+        session._displayPhone,
+        session._displayEmail,
+        session.status,
+        session._requestReason,
+        session._latest?.content,
+        session._lead?.message
+      ].join(' ').toLowerCase();
+      return text.includes(search);
+    });
+  }
+
+  renderLiveInboxStats();
+
+  if(filtered.length === 0){
+    list.innerHTML = '<div class="wa-empty-inbox"><strong>No chats here.</strong><p>Try another filter, refresh, or wait for a new client.</p></div>';
+    return;
+  }
+
+  list.innerHTML = `
+    <div class="wa-chat-list-v158">
+      ${filtered.map(session => {
+        const name = session._displayName || 'Website Visitor';
+        const initials = getInitials(name);
+        const latestText = session._lead?.message || session._latest?.content || 'No message yet';
+        const time = formatShortTime(session._latest?.created_at || session.updated_at || session.created_at);
+        const unread = Number(session._unreadCount || 0);
+        const active = session.id === selectedLiveSessionId ? 'active' : '';
+        const hasUnread = unread > 0 ? 'has-unread' : '';
+        const detail = session._displayPhone || (session._hasLeadDetails ? 'Details saved' : 'No phone');
+        const statusText = session.status === 'archived' ? 'Archived' : (session._needsReply ? 'Unread' : (session.status || 'bot_mode'));
+
+        return `
+          <button type="button" class="wa-chat-row-v158 ${active} ${hasUnread}" onclick="selectLiveSession('${escapeHTML(String(session.id))}')">
+            <div class="wa-avatar-v158">${escapeHTML(initials)}</div>
+            <div class="wa-row-main-v158">
+              <div class="wa-row-top-v158">
+                <strong>${escapeHTML(name)}</strong>
+                <span>${escapeHTML(time)}</span>
+              </div>
+              <div class="wa-row-preview-v158">
+                <p>${escapeHTML(String(latestText).slice(0, 86))}</p>
+                ${unread > 0 && session.status !== 'archived' ? `<b>${unread}</b>` : ''}
+              </div>
+              <div class="wa-row-bottom-v158">
+                <small>${escapeHTML(statusText)}</small>
+                <small>${escapeHTML(detail)}</small>
+              </div>
+            </div>
+          </button>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+async function selectLiveSession(sessionId){
+  selectedLiveSessionId = sessionId;
+  const openedSession = liveChatSessions.find(s => s.id === sessionId);
+  if(openedSession) openedSession._unreadCount = 0;
+
+  document.querySelector('.support-chat-panel')?.classList.add('chat-open');
+  renderLiveSessions();
+  await loadLiveMessages();
+
+  if(liveChatMessagesTimer) clearInterval(liveChatMessagesTimer);
+  liveChatMessagesTimer = setInterval(async () => {
+    if(selectedLiveSessionId && isLiveChatTabActiveV16()){
+      await loadLiveChats();
+    }
+  }, 3500);
+}
+
+async function archiveSelectedChatV16(){
+  if(!selectedLiveSessionId) return showMessage('Select a client chat first.', 'red');
+  if(!confirm('Hide/archive this chat from the main inbox?')) return;
+
+  const { error } = await supabaseClient
+    .from('chat_sessions')
+    .update({ status:'archived', updated_at:new Date().toISOString() })
+    .eq('id', selectedLiveSessionId);
+
+  if(error) return showMessage('Archive failed: ' + error.message, 'red');
+
+  selectedLiveSessionId = null;
+  await loadLiveChats();
+  resetLiveChatPanelV16('Chat archived.');
+}
+
+async function deleteSelectedChatV16(){
+  if(!selectedLiveSessionId) return showMessage('Select a client chat first.', 'red');
+
+  const warning = 'Delete this chat permanently? This removes the session from the inbox. If database rules block hard delete, it will be archived instead.';
+  if(!confirm(warning)) return;
+
+  const sessionId = selectedLiveSessionId;
+
+  try{
+    await supabaseClient.from('chat_messages').delete().eq('session_id', sessionId);
+    await supabaseClient.from('visitor_leads').delete().eq('session_id', sessionId);
+
+    const del = await supabaseClient
+      .from('chat_sessions')
+      .delete()
+      .eq('id', sessionId);
+
+    if(del.error){
+      const fallback = await supabaseClient
+        .from('chat_sessions')
+        .update({ status:'archived', updated_at:new Date().toISOString() })
+        .eq('id', sessionId);
+
+      if(fallback.error) throw fallback.error;
+      showMessage('Hard delete was blocked, so the chat was archived instead.', 'green');
+    }else{
+      showMessage('Chat deleted.', 'green');
+    }
+
+    selectedLiveSessionId = null;
+    await loadLiveChats();
+    resetLiveChatPanelV16('Chat removed from inbox.');
+  }catch(err){
+    console.error('[deleteSelectedChatV16]', err);
+    showMessage('Delete failed: ' + (err.message || 'Unknown error'), 'red');
+  }
+}
+
+async function archiveOldBotChatsV16(){
+  const candidates = liveChatSessions.filter(s => {
+    const noPhone = !s._displayPhone;
+    const notUnread = !s._needsReply && Number(s._unreadCount || 0) === 0;
+    const oldBot = ['bot_mode','closed'].includes(s.status || 'bot_mode');
+    return s.status !== 'archived' && noPhone && notUnread && oldBot;
+  });
+
+  if(candidates.length === 0){
+    showMessage('No old bot/test chats found to hide.', 'muted');
+    return;
+  }
+
+  if(!confirm(`Hide ${candidates.length} old bot/test chats from the main inbox?`)) return;
+
+  const ids = candidates.map(s => s.id);
+
+  const { error } = await supabaseClient
+    .from('chat_sessions')
+    .update({ status:'archived', updated_at:new Date().toISOString() })
+    .in('id', ids);
+
+  if(error) return showMessage('Could not hide old chats: ' + error.message, 'red');
+
+  if(selectedLiveSessionId && ids.includes(selectedLiveSessionId)){
+    selectedLiveSessionId = null;
+    resetLiveChatPanelV16('Old chat hidden.');
+  }
+
+  await loadLiveChats();
+  showMessage(`${ids.length} old bot/test chats hidden.`, 'green');
+}
+
+function resetLiveChatPanelV16(message = 'No client selected'){
+  const title = document.getElementById('liveChatTitle');
+  const meta = document.getElementById('liveChatMeta');
+  const status = document.getElementById('liveChatStatus');
+  const box = document.getElementById('liveChatMessages');
+
+  if(title) title.textContent = 'Select a client';
+  if(meta) meta.textContent = 'Choose a visitor from the inbox to reply.';
+  if(status){
+    status.textContent = 'No chat selected';
+    status.className = 'support-status';
+  }
+  if(box){
+    box.innerHTML = `<div class="empty-chat"><strong>${escapeHTML(message)}</strong><p>Select another conversation from the left inbox.</p></div>`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setupLiveInboxAutoRefreshV16();
+});
