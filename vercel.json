@@ -1,9 +1,33 @@
 {
   "rewrites": [
-    { "source": "/api/chat-poll", "destination": "/api/lead?action=chat-poll" },
+    { "source": "/api/chat-poll",      "destination": "/api/lead?action=chat-poll" },
     { "source": "/api/client-request", "destination": "/api/lead?action=client-request" },
-    { "source": "/api/early-access", "destination": "/api/lead?action=early-access" },
-    { "source": "/api/payment-proof", "destination": "/api/lead?action=payment-proof" },
-    { "source": "/api/client-access", "destination": "/api/lead?action=client-access" }
+    { "source": "/api/early-access",   "destination": "/api/lead?action=early-access" },
+    { "source": "/api/payment-proof",  "destination": "/api/lead?action=payment-proof" },
+    { "source": "/api/client-access",  "destination": "/api/lead?action=client-access" },
+
+    { "source": "/api/bot/license/activate",      "destination": "/api/bot?action=license.activate" },
+    { "source": "/api/bot/license/check",         "destination": "/api/bot?action=license.check" },
+    { "source": "/api/bot/license/heartbeat",     "destination": "/api/bot?action=license.heartbeat" },
+    { "source": "/api/bot/device/bind",           "destination": "/api/bot?action=device.bind" },
+    { "source": "/api/bot/device/reset-request",  "destination": "/api/bot?action=device.reset-request" },
+    { "source": "/api/bot/subscription/status",   "destination": "/api/bot?action=subscription.status" },
+    { "source": "/api/bot/subscription/create",   "destination": "/api/bot?action=subscription.create" },
+    { "source": "/api/bot/config",                "destination": "/api/bot?action=config.get" },
+    { "source": "/api/bot/log/trade",             "destination": "/api/bot?action=log.trade" },
+    { "source": "/api/bot/log/risk",              "destination": "/api/bot?action=log.risk" },
+    { "source": "/api/bot/log/signal",            "destination": "/api/bot?action=log.signal" },
+    { "source": "/api/bot/user/dashboard",        "destination": "/api/bot?action=user.dashboard" },
+    { "source": "/api/bot/user/trades",           "destination": "/api/bot?action=user.trades" },
+    { "source": "/api/bot/user/risk-events",      "destination": "/api/bot?action=user.risk-events" },
+    { "source": "/api/bot/admin/overview",        "destination": "/api/bot?action=admin.overview" },
+    { "source": "/api/bot/admin/users",           "destination": "/api/bot?action=admin.users" },
+    { "source": "/api/bot/admin/licenses",        "destination": "/api/bot?action=admin.licenses" },
+    { "source": "/api/bot/admin/trades",          "destination": "/api/bot?action=admin.trades" },
+    { "source": "/api/bot/admin/disable-user",    "destination": "/api/bot?action=admin.disable-user" },
+    { "source": "/api/bot/admin/reset-device",    "destination": "/api/bot?action=admin.reset-device" },
+    { "source": "/api/bot/admin/push-config",     "destination": "/api/bot?action=admin.push-config" },
+    { "source": "/api/bot/admin/kill-switch",     "destination": "/api/bot?action=admin.kill-switch" },
+    { "source": "/api/bot/admin/extend-sub",      "destination": "/api/bot?action=admin.extend-sub" }
   ]
 }

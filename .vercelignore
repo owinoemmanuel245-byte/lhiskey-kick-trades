@@ -1,8 +1,10 @@
-# LHISKEY KICK TRADES — 2 FUNCTION API RESCUE v16.7
-# Deploy only assistant.js and lead.js as serverless functions.
+# LHISKEY KICK TRADES — Vercel function whitelist
+# Only these two files are deployed as serverless functions.
+# All other /api/* files are routed through these via vercel.json rewrites.
 api/**
 !api/
 !api/assistant.js
 !api/lead.js
+!api/bot.js
 .DS_Store
 Thumbs.db
