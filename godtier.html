@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GodTier Zero 1 — Bot Dashboard | LHISKEY KICK TRADES</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ── RESET & TOKENS ─────────────────────────────────────────── */
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#060606;--bg2:#0e0e0e;--bg3:#161616;
+  --card:#111111;--border:#1f1f1f;--border2:#2a2a2a;
+  --green:#00ff87;--green2:#00cc6a;--green-dim:#00ff8715;
+  --green-glow:0 0 40px #00ff8730,0 0 80px #00ff8710;
+  --text:#f0f0f0;--muted:#666;--muted2:#444;--red:#ff4b4b;
+  --yellow:#ffc800;--orange:#ff9600;
+}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;overflow-x:hidden;min-height:100vh;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--bg2);}
+::-webkit-scrollbar-thumb{background:var(--green2);border-radius:2px;}
+
+/* ── NAV ────────────────────────────────────────────────────── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 5%;
+  background:rgba(6,6,6,.9);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;letter-spacing:-.5px;}
+.logo span{color:var(--green);}
+.nav-right{display:flex;align-items:center;gap:16px;}
+.nav-back{
+  font-size:.82rem;color:var(--muted);text-decoration:none;
+  letter-spacing:.5px;text-transform:uppercase;transition:color .2s;
+}
+.nav-back:hover{color:var(--green);}
+.nav-badge{
+  font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:1px;
+  background:var(--green-dim);color:var(--green);
+  border:1px solid #00ff8740;padding:4px 10px;border-radius:2px;
+}
+
+/* ── LAYOUT ─────────────────────────────────────────────────── */
+.dash-wrap{
+  max-width:1200px;margin:0 auto;
+  padding:100px 5% 60px;
+}
+
+/* ── LOGIN GATE ─────────────────────────────────────────────── */
+#loginGate{
+  min-height:80vh;display:flex;align-items:center;justify-content:center;
+}
+.login-box{
+  background:var(--card);border:1px solid var(--border2);
+  padding:48px 40px;max-width:460px;width:100%;text-align:center;
+}
+.login-box .gt-icon{font-size:2.8rem;margin-bottom:16px;}
+.login-box h2{font-family:'Syne',sans-serif;font-weight:800;font-size:1.6rem;margin-bottom:8px;}
+.login-box p{color:var(--muted);font-size:.9rem;margin-bottom:28px;line-height:1.6;}
+.login-box input{
+  width:100%;background:var(--bg2);border:1px solid var(--border2);
+  color:var(--text);padding:14px 16px;font-size:.9rem;
+  font-family:'DM Mono',monospace;letter-spacing:1px;
+  margin-bottom:12px;outline:none;transition:border-color .2s;
+}
+.login-box input:focus{border-color:var(--green);}
+.login-box input::placeholder{color:var(--muted2);letter-spacing:0;}
+.btn-primary{
+  background:var(--green);color:#000;
+  font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;
+  letter-spacing:.8px;text-transform:uppercase;
+  padding:13px 28px;border:none;cursor:pointer;width:100%;
+  clip-path:polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%);
+  transition:background .2s,box-shadow .2s;
+}
+.btn-primary:hover{background:#fff;box-shadow:var(--green-glow);}
+.btn-primary:disabled{background:var(--muted2);color:var(--muted);cursor:not-allowed;box-shadow:none;}
+.login-error{color:var(--red);font-size:.82rem;margin-top:10px;min-height:20px;}
+.login-hint{color:var(--muted);font-size:.76rem;margin-top:16px;line-height:1.5;}
+.login-hint a{color:var(--green);text-decoration:none;}
+
+/* ── DASHBOARD ──────────────────────────────────────────────── */
+#dashboard{display:none;}
+
+/* Header row */
+.dash-header{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  flex-wrap:wrap;gap:16px;margin-bottom:32px;
+}
+.dash-title-block .section-tag{
+  font-family:'DM Mono',monospace;font-size:.7rem;
+  letter-spacing:2px;text-transform:uppercase;color:var(--green);
+  margin-bottom:6px;
+}
+.dash-title-block h1{
+  font-family:'Syne',sans-serif;font-weight:800;font-size:2rem;
+  margin-bottom:4px;
+}
+.dash-title-block p{color:var(--muted);font-size:.9rem;}
+.dash-logout{
+  background:transparent;color:var(--muted);
+  border:1px solid var(--border2);padding:8px 18px;
+  font-size:.8rem;cursor:pointer;transition:color .2s,border-color .2s;
+}
+.dash-logout:hover{color:var(--red);border-color:var(--red);}
+
+/* ── STATUS CARDS ROW ────────────────────────────────────────── */
+.status-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:14px;margin-bottom:28px;
+}
+.status-card{
+  background:var(--card);border:1px solid var(--border);
+  padding:20px;position:relative;overflow:hidden;
+}
+.status-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--green);opacity:.4;
+}
+.status-card.card-danger::before{background:var(--red);}
+.status-card.card-warn::before{background:var(--yellow);}
+.status-card.card-ok::before{background:var(--green);}
+.sc-label{
+  font-family:'DM Mono',monospace;font-size:.65rem;
+  letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:8px;
+}
+.sc-value{
+  font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;
+  line-height:1;margin-bottom:4px;
+}
+.sc-value.green{color:var(--green);}
+.sc-value.red{color:var(--red);}
+.sc-value.yellow{color:var(--yellow);}
+.sc-sub{font-size:.76rem;color:var(--muted);}
+
+/* ── COUNTDOWN ───────────────────────────────────────────────── */
+.expiry-bar-wrap{margin-top:8px;}
+.expiry-bar-bg{
+  background:var(--border2);height:3px;border-radius:2px;overflow:hidden;
+}
+.expiry-bar-fill{height:100%;border-radius:2px;transition:width .5s;}
+
+/* ── RENEWAL BANNER ──────────────────────────────────────────── */
+#renewalBanner{
+  display:none;
+  background:rgba(255,75,75,.08);border:1px solid rgba(255,75,75,.3);
+  padding:16px 20px;margin-bottom:24px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+}
+#renewalBanner p{font-size:.88rem;color:var(--red);}
+#renewalBanner a{
+  background:var(--red);color:#fff;
+  font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;
+  letter-spacing:.5px;padding:8px 20px;text-decoration:none;
+  clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+}
+#renewalBanner.hidden{display:none !important;}
+
+/* ── SECTION HEADERS ─────────────────────────────────────────── */
+.dash-section{margin-bottom:32px;}
+.dash-section-head{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:14px;flex-wrap:wrap;gap:8px;
+}
+.dash-section-head h3{
+  font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;
+  display:flex;align-items:center;gap:8px;
+}
+.dash-section-head h3 span.dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--green);display:inline-block;flex-shrink:0;
+}
+.dash-section-head .sec-action{
+  font-size:.78rem;color:var(--green);cursor:pointer;
+  background:none;border:none;text-decoration:underline;
+}
+
+/* ── DEVICE CARD ─────────────────────────────────────────────── */
+.device-card{
+  background:var(--card);border:1px solid var(--border);
+  padding:20px;display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:16px;
+}
+.device-info{display:flex;flex-direction:column;gap:4px;}
+.device-name{font-weight:500;font-size:.95rem;}
+.device-meta{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted);}
+.device-status-pill{
+  font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:1px;
+  padding:5px 12px;border-radius:20px;text-transform:uppercase;
+}
+.pill-active{background:rgba(0,255,135,.1);color:var(--green);border:1px solid #00ff8740;}
+.pill-reset{background:rgba(255,200,0,.1);color:var(--yellow);border:1px solid #ffc80040;}
+.pill-none{background:rgba(150,150,150,.1);color:var(--muted);border:1px solid var(--border2);}
+.device-reset-btn{
+  background:transparent;color:var(--muted);
+  border:1px solid var(--border2);padding:7px 16px;
+  font-size:.78rem;cursor:pointer;transition:color .2s,border-color .2s;
+}
+.device-reset-btn:hover{color:var(--yellow);border-color:var(--yellow);}
+
+/* ── PERFORMANCE SUMMARY ─────────────────────────────────────── */
+.perf-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+  gap:12px;
+}
+.perf-card{
+  background:var(--card);border:1px solid var(--border);padding:16px;
+  text-align:center;
+}
+.perf-card .pv{
+  font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;
+  display:block;margin-bottom:4px;
+}
+.perf-card .pl{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+.pv-green{color:var(--green);}
+.pv-red{color:var(--red);}
+.pv-yellow{color:var(--yellow);}
+
+/* ── TRADE TABLE ─────────────────────────────────────────────── */
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:.82rem;}
+thead tr{border-bottom:1px solid var(--border2);}
+th{
+  text-align:left;padding:10px 12px;
+  font-family:'DM Mono',monospace;font-size:.65rem;
+  letter-spacing:1px;text-transform:uppercase;color:var(--muted);
+  font-weight:500;white-space:nowrap;
+}
+td{
+  padding:10px 12px;border-bottom:1px solid var(--border);
+  vertical-align:middle;white-space:nowrap;
+}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--bg2);}
+.td-mono{font-family:'DM Mono',monospace;font-size:.78rem;}
+.td-muted{color:var(--muted);font-size:.78rem;}
+
+/* ── BADGES ──────────────────────────────────────────────────── */
+.badge{
+  display:inline-block;padding:2px 8px;border-radius:20px;
+  font-family:'DM Mono',monospace;font-size:.65rem;
+  letter-spacing:.5px;text-transform:uppercase;font-weight:600;
+}
+.badge-buy    {background:rgba(0,255,135,.1);color:var(--green);border:1px solid #00ff8740;}
+.badge-sell   {background:rgba(255,75,75,.1);color:var(--red);border:1px solid #ff4b4b40;}
+.badge-open   {background:rgba(0,255,135,.1);color:var(--green);}
+.badge-closed {background:rgba(150,150,150,.1);color:var(--muted);}
+.badge-cancelled{background:rgba(150,150,150,.1);color:var(--muted);}
+.badge-win    {color:var(--green);font-weight:700;}
+.badge-loss   {color:var(--red);font-weight:700;}
+
+/* ── SCORE BAR ───────────────────────────────────────────────── */
+.score-chip{
+  font-family:'DM Mono',monospace;font-size:.72rem;
+  font-weight:700;padding:2px 6px;border-radius:3px;
+}
+.score-premium{background:rgba(0,255,135,.15);color:var(--green);}
+.score-good   {background:rgba(255,200,0,.15);color:var(--yellow);}
+.score-low    {background:rgba(255,75,75,.15);color:var(--red);}
+
+/* ── RISK EVENTS ─────────────────────────────────────────────── */
+.risk-item{
+  background:var(--card);border:1px solid var(--border);
+  padding:14px 16px;margin-bottom:8px;
+  display:flex;align-items:flex-start;gap:12px;
+}
+.risk-icon{font-size:1rem;flex-shrink:0;margin-top:1px;}
+.risk-body .risk-type{font-size:.8rem;font-weight:600;text-transform:capitalize;}
+.risk-body .risk-msg{font-size:.78rem;color:var(--muted);margin-top:2px;line-height:1.4;}
+.risk-body .risk-time{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted2);margin-top:4px;}
+.risk-sev-critical{border-left:3px solid var(--red);}
+.risk-sev-high    {border-left:3px solid var(--orange);}
+.risk-sev-medium  {border-left:3px solid var(--yellow);}
+.risk-sev-low     {border-left:3px solid var(--muted2);}
+
+/* ── DOWNLOAD CARD ───────────────────────────────────────────── */
+.download-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
+.dl-card{
+  background:var(--card);border:1px solid var(--border);
+  padding:22px;display:flex;flex-direction:column;gap:10px;
+}
+.dl-card .dl-icon{font-size:1.8rem;}
+.dl-card h4{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;}
+.dl-card p{font-size:.78rem;color:var(--muted);line-height:1.5;flex:1;}
+.btn-dl{
+  background:var(--green);color:#000;
+  font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem;
+  letter-spacing:.5px;text-transform:uppercase;
+  padding:10px 18px;border:none;cursor:pointer;text-decoration:none;
+  display:inline-block;text-align:center;
+  clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+  transition:background .2s;
+}
+.btn-dl:hover{background:#fff;}
+.btn-dl-ghost{
+  background:transparent;color:var(--green);
+  border:1px solid #00ff8740;
+  font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem;
+  letter-spacing:.5px;text-transform:uppercase;
+  padding:10px 18px;cursor:pointer;text-decoration:none;
+  display:inline-block;text-align:center;
+  transition:border-color .2s,box-shadow .2s;
+}
+.btn-dl-ghost:hover{border-color:var(--green);box-shadow:var(--green-glow);}
+
+/* ── SETUP GUIDE ─────────────────────────────────────────────── */
+.setup-steps{display:flex;flex-direction:column;gap:2px;}
+.setup-step{
+  background:var(--card);border:1px solid var(--border);
+  padding:0;overflow:hidden;
+}
+.step-head{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 18px;cursor:pointer;
+  transition:background .2s;user-select:none;
+}
+.step-head:hover{background:var(--bg2);}
+.step-num{
+  font-family:'Syne',sans-serif;font-weight:800;font-size:.85rem;
+  background:var(--green-dim);color:var(--green);
+  width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.step-title{font-size:.88rem;font-weight:500;flex:1;}
+.step-chevron{color:var(--muted);font-size:.8rem;transition:transform .2s;}
+.step-body{
+  display:none;padding:0 18px 16px 60px;
+  font-size:.83rem;color:var(--muted);line-height:1.7;
+}
+.step-body.open{display:block;}
+.step-body code{
+  display:inline-block;background:var(--bg3);
+  color:var(--green);font-family:'DM Mono',monospace;
+  padding:2px 6px;font-size:.78rem;border-radius:2px;
+}
+.step-body ol,.step-body ul{padding-left:18px;margin-top:6px;}
+.step-body li{margin-bottom:4px;}
+.step-chevron.open{transform:rotate(180deg);}
+
+/* ── EMPTY STATES ────────────────────────────────────────────── */
+.empty-state{
+  text-align:center;padding:40px 20px;color:var(--muted);
+  font-size:.85rem;border:1px dashed var(--border2);
+}
+.empty-state .es-icon{font-size:2rem;margin-bottom:10px;opacity:.5;}
+
+/* ── PAGINATION ──────────────────────────────────────────────── */
+.pagination{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap;}
+.pg-btn{
+  background:var(--card);border:1px solid var(--border);
+  color:var(--text);padding:5px 12px;
+  font-size:.78rem;cursor:pointer;transition:border-color .2s,color .2s;
+}
+.pg-btn:hover{border-color:var(--green);color:var(--green);}
+.pg-btn.active{border-color:var(--green);color:var(--green);}
+
+/* ── FOOTER ──────────────────────────────────────────────────── */
+.dash-footer{
+  border-top:1px solid var(--border);
+  padding:24px 5%;margin-top:40px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:12px;
+}
+.dash-footer p{font-size:.76rem;color:var(--muted);}
+.dash-footer a{color:var(--green);text-decoration:none;font-size:.76rem;}
+.risk-disclaimer{
+  background:rgba(255,75,75,.05);border:1px solid rgba(255,75,75,.15);
+  padding:14px 18px;margin-top:32px;
+}
+.risk-disclaimer p{font-size:.75rem;color:var(--muted);line-height:1.6;}
+.risk-disclaimer strong{color:var(--red);}
+
+/* ── LOADING OVERLAY ─────────────────────────────────────────── */
+#loadingOverlay{
+  position:fixed;inset:0;background:rgba(6,6,6,.85);
+  z-index:9999;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:16px;
+}
+#loadingOverlay.hidden{display:none;}
+.spinner{
+  width:36px;height:36px;border:3px solid var(--border2);
+  border-top-color:var(--green);border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+#loadingOverlay p{font-family:'DM Mono',monospace;font-size:.8rem;color:var(--muted);}
+
+/* ── TOAST ───────────────────────────────────────────────────── */
+#toast{
+  position:fixed;bottom:24px;right:24px;z-index:9998;
+  background:var(--card);border:1px solid var(--border2);
+  padding:12px 18px;font-size:.82rem;max-width:300px;
+  opacity:0;transform:translateY(10px);
+  transition:opacity .3s,transform .3s;pointer-events:none;
+}
+#toast.show{opacity:1;transform:translateY(0);}
+#toast.toast-ok{border-color:#00ff8740;color:var(--green);}
+#toast.toast-err{border-color:#ff4b4b40;color:var(--red);}
+
+/* ── RESPONSIVE ──────────────────────────────────────────────── */
+@media(max-width:680px){
+  .dash-wrap{padding:80px 4% 40px;}
+  .status-grid{grid-template-columns:repeat(2,1fr);}
+  .perf-grid{grid-template-columns:repeat(2,1fr);}
+  .login-box{padding:32px 22px;}
+  .dash-header{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <p>Verifying license...</p>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">LHISKEY <span>KICK TRADES</span></div>
+  <div class="nav-right">
+    <a href="index.html" class="nav-back">← Back to site</a>
+    <span class="nav-badge">GODTIER ZERO 1</span>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  LOGIN GATE                                                  -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="dash-wrap">
+<div id="loginGate">
+  <div class="login-box">
+    <div class="gt-icon">⚡</div>
+    <h2>Bot Dashboard Access</h2>
+    <p>Enter your GodTier Zero 1 license key to access your dashboard, trade logs, and bot settings.</p>
+    <input
+      type="text"
+      id="licenseInput"
+      placeholder="GT1-XXXXXXXX-XXXXXXXXXX-XXXXXXXX"
+      maxlength="60"
+      autocomplete="off"
+      spellcheck="false"
+      onkeydown="if(event.key==='Enter')gtLogin()"
+    />
+    <button class="btn-primary" onclick="gtLogin()" id="loginBtn">Access Dashboard</button>
+    <p class="login-error" id="loginError"></p>
+    <p class="login-hint">
+      Don't have a license key? <a href="index.html#payments">Subscribe here</a><br>
+      Lost your key or device issue? <a href="index.html#contact">Contact support</a>
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  DASHBOARD (hidden until login)                              -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="dashboard">
+
+  <!-- Renewal banner (shown when <7 days left or expired) -->
+  <div id="renewalBanner" class="hidden">
+    <p id="renewalMsg">⚠ Your subscription is expiring soon. Renew to keep your bot running.</p>
+    <a href="index.html#payments">Renew Now →</a>
+  </div>
+
+  <!-- Dashboard header -->
+  <div class="dash-header">
+    <div class="dash-title-block">
+      <p class="section-tag">→ GodTier Zero 1 Bot</p>
+      <h1>Your Bot Dashboard</h1>
+      <p>Live subscription status, trade history, risk events, and setup guide.</p>
+    </div>
+    <button class="dash-logout" onclick="gtLogout()">Sign Out</button>
+  </div>
+
+  <!-- ── STATUS CARDS ───────────────────────────────────────── -->
+  <div class="status-grid">
+    <div class="status-card" id="cardSubscription">
+      <div class="sc-label">Subscription</div>
+      <div class="sc-value" id="scSubStatus">—</div>
+      <div class="sc-sub" id="scSubPlan">—</div>
+    </div>
+    <div class="status-card" id="cardExpiry">
+      <div class="sc-label">Expires In</div>
+      <div class="sc-value" id="scDaysLeft">—</div>
+      <div class="sc-sub" id="scExpiryDate">—</div>
+      <div class="expiry-bar-wrap">
+        <div class="expiry-bar-bg"><div class="expiry-bar-fill" id="expiryBar" style="width:0%;background:var(--green)"></div></div>
+      </div>
+    </div>
+    <div class="status-card" id="cardDevice">
+      <div class="sc-label">Device Lock</div>
+      <div class="sc-value" id="scDeviceStatus">—</div>
+      <div class="sc-sub" id="scDeviceName">—</div>
+    </div>
+    <div class="status-card" id="cardMode">
+      <div class="sc-label">Bot Mode</div>
+      <div class="sc-value green" id="scMode">—</div>
+      <div class="sc-sub" id="scModeDesc">—</div>
+    </div>
+    <div class="status-card" id="cardLicense">
+      <div class="sc-label">License</div>
+      <div class="sc-value" id="scLicStatus">—</div>
+      <div class="sc-sub" id="scLicId">—</div>
+    </div>
+    <div class="status-card" id="cardLastSeen">
+      <div class="sc-label">Last Heartbeat</div>
+      <div class="sc-value" id="scLastSeen" style="font-size:1rem;">—</div>
+      <div class="sc-sub" id="scLastSeenSub">Bot connection status</div>
+    </div>
+  </div>
+
+  <!-- ── PERFORMANCE SUMMARY ──────────────────────────────── -->
+  <div class="dash-section">
+    <div class="dash-section-head">
+      <h3><span class="dot"></span> Performance Summary</h3>
+      <button class="sec-action" onclick="gtLoadTrades()">Refresh</button>
+    </div>
+    <div class="perf-grid" id="perfGrid">
+      <div class="perf-card"><span class="pv" id="pfTotal">—</span><span class="pl">Total Trades</span></div>
+      <div class="perf-card"><span class="pv pv-green" id="pfWins">—</span><span class="pl">Wins</span></div>
+      <div class="perf-card"><span class="pv pv-red" id="pfLosses">—</span><span class="pl">Losses</span></div>
+      <div class="perf-card"><span class="pv" id="pfWinRate">—</span><span class="pl">Win Rate</span></div>
+      <div class="perf-card"><span class="pv" id="pfPnl">—</span><span class="pl">Total P/L (USD)</span></div>
+      <div class="perf-card"><span class="pv" id="pfAvgRR">—</span><span class="pl">Avg RR</span></div>
+      <div class="perf-card"><span class="pv" id="pfAvgScore">—</span><span class="pl">Avg Score</span></div>
+    </div>
+  </div>
+
+  <!-- ── DEVICE ────────────────────────────────────────────── -->
+  <div class="dash-section">
+    <div class="dash-section-head">
+      <h3><span class="dot"></span> Bound Device</h3>
+    </div>
+    <div id="deviceWrap">
+      <div class="empty-state"><div class="es-icon">💻</div>No device bound yet. Activate bot to bind.</div>
+    </div>
+  </div>
+
+  <!-- ── TRADE HISTORY ──────────────────────────────────────── -->
+  <div class="dash-section">
+    <div class="dash-section-head">
+      <h3><span class="dot"></span> Trade History</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <select id="tradeSymbolFilter" onchange="gtLoadTrades()" style="background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:5px 10px;font-size:.78rem;">
+          <option value="">All Symbols</option>
+          <option value="XAUUSD">XAUUSD</option>
+          <option value="US500">US500</option>
+          <option value="US100">US100</option>
+          <option value="US30">US30</option>
+        </select>
+        <select id="tradeStatusFilter" onchange="gtLoadTrades()" style="background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:5px 10px;font-size:.78rem;">
+          <option value="">All</option>
+          <option value="open">Open</option>
+          <option value="closed">Closed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Symbol</th><th>Dir</th><th>Session</th><th>Score</th>
+          <th>Entry</th><th>SL</th><th>TP</th><th>Lots</th><th>Risk%</th>
+          <th>Status</th><th>P/L</th><th>RR</th><th>Close Reason</th><th>Opened</th>
+        </tr></thead>
+        <tbody id="tradeTbody">
+          <tr><td colspan="14" class="empty-state">Loading trades...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination" id="tradePagination"></div>
+  </div>
+
+  <!-- ── RISK EVENTS ────────────────────────────────────────── -->
+  <div class="dash-section">
+    <div class="dash-section-head">
+      <h3><span class="dot"></span> Risk Events</h3>
+      <button class="sec-action" onclick="gtLoadRiskEvents()">Refresh</button>
+    </div>
+    <div id="riskWrap">
+      <div class="empty-state"><div class="es-icon">🛡</div>No risk events recorded.</div>
+    </div>
+    <div class="pagination" id="riskPagination"></div>
+  </div>
+
+  <!-- ── DOWNLOAD ───────────────────────────────────────────── -->
+  <div class="dash-section">
+    <div class="dash-section-head">
+      <h3><span class="dot"></span> Bot Files</h3>
+    </div>
+    <div class="download-grid">
+      <div class="dl-card">
+        <div class="dl-icon">📦</div>
+        <h4>GodTier Zero 1 — MT5 EA</h4>
+        <p>Expert Advisor for MetaTrader 5. Place in your <code>Experts</code> folder. Requires active license.</p>
+        <a id="dlEA" href="#" class="btn-dl" onclick="gtCheckDownload(event,'ea')">Download EA (.ex5)</a>
+      </div>
+      <div class="dl-card">
+        <div class="dl-icon">🐍</div>
+        <h4>GodTier Zero 1 — Python Bridge</h4>
+        <p>Optional advanced analytics, backtesting, and signal logging bridge. Requires Python 3.10+.</p>
+        <a id="dlPy" href="#" class="btn-dl-ghost" onclick="gtCheckDownload(event,'python')">Download Bridge (.zip)</a>
+      </div>
+      <div class="dl-card">
+        <div class="dl-icon">📋</div>
+        <h4>Setup Guide (PDF)</h4>
+        <p>Full step-by-step installation, configuration, and risk setup guide for GodTier Zero 1.</p>
+        <a id="dlGuide" href="#" class="btn-dl-ghost" onclick="gtCheckDownload(event,'guide')">Download Guide (.pdf)</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SETUP GUIDE ────────────────────────────────────────── -->
+  <div class="dash-section">
+    <div class="dash-section-head">
+      <h3><span class="dot"></span> Quick Setup Guide</h3>
+    </div>
+    <div class="setup-steps">
+
+      <div class="setup-step">
+        <div class="step-head" onclick="gtToggleStep(this)">
+          <div class="step-num">1</div>
+          <div class="step-title">Download MetaTrader 5 and open a broker account</div>
+          <div class="step-chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <ol>
+            <li>Download <strong>MetaTrader 5</strong> from your broker's website (e.g. HFM, IC Markets, Exness).</li>
+            <li>Create a live or demo account with your broker.</li>
+            <li>Log in to MT5 using your account number, password, and server name.</li>
+            <li>Make sure your broker supports <strong>US500, US100, US30, and XAUUSD</strong> as tradable symbols.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="setup-step">
+        <div class="step-head" onclick="gtToggleStep(this)">
+          <div class="step-num">2</div>
+          <div class="step-title">Install the GodTier Zero 1 Expert Advisor in MT5</div>
+          <div class="step-chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <ol>
+            <li>Download the <strong>GodTier Zero 1 EA (.ex5)</strong> file above.</li>
+            <li>In MT5, go to <code>File → Open Data Folder</code>.</li>
+            <li>Navigate to <code>MQL5 → Experts</code>.</li>
+            <li>Copy the <code>.ex5</code> file into that folder.</li>
+            <li>Restart MT5 or press F5 in the Navigator panel.</li>
+            <li>The EA will appear under <strong>Expert Advisors</strong> in the Navigator.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="setup-step">
+        <div class="step-head" onclick="gtToggleStep(this)">
+          <div class="step-num">3</div>
+          <div class="step-title">Activate your license key in the EA</div>
+          <div class="step-chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <ol>
+            <li>Drag the EA onto any chart (e.g. XAUUSD M5).</li>
+            <li>In the EA settings dialog, paste your license key: <code id="displayLicKey">—</code></li>
+            <li>Enable <strong>Allow Algo Trading</strong> and <strong>Allow WebRequests</strong>.</li>
+            <li>Add <code>lhiskeykicktrades.vercel.app</code> to MT5's allowed URLs list:<br>
+                <code>Tools → Options → Expert Advisors → Allow WebRequests</code></li>
+            <li>Click OK. The EA will contact the license server and activate.</li>
+            <li>Your device will be automatically bound — this counts as your one device lock.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="setup-step">
+        <div class="step-head" onclick="gtToggleStep(this)">
+          <div class="step-num">4</div>
+          <div class="step-title">Configure risk settings and select your bot mode</div>
+          <div class="step-chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <ul>
+            <li><strong>Conservative:</strong> Stricter filters, lower risk (0.5%). Best for funded/prop accounts or beginners.</li>
+            <li><strong>Standard:</strong> Balanced — default mode for most users (0.5%–1%).</li>
+            <li><strong>Aggressive:</strong> More trades, slightly lower score threshold. Accept extra risk warning.</li>
+            <li><strong>Prop Firm:</strong> Strictest drawdown protection. Score 80+ required. Lower risk.</li>
+            <li><strong>Demo:</strong> No real execution. Logs signals only. Use for testing before going live.</li>
+          </ul>
+          <p style="margin-top:8px;"><strong>Start with Demo or Conservative mode first.</strong> Forward-test for at least 2 weeks before using Standard or Aggressive mode with real funds.</p>
+        </div>
+      </div>
+
+      <div class="setup-step">
+        <div class="step-head" onclick="gtToggleStep(this)">
+          <div class="step-num">5</div>
+          <div class="step-title">Understanding sessions — when the bot trades</div>
+          <div class="step-chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <p>The bot only trades during two windows:</p>
+          <ul>
+            <li><strong>London Open:</strong> First 60–120 minutes after London market opens (~08:00 UTC / 11:00 EAT)</li>
+            <li><strong>New York Open:</strong> First 60–120 minutes after NY market opens (~13:30 UTC / 16:30 EAT)</li>
+          </ul>
+          <p style="margin-top:6px;">Outside these windows the bot watches but does not trade. This is intentional — quality over quantity. Do not expect trades every hour.</p>
+          <p style="margin-top:6px;">MT5 must be running and connected during session windows for the bot to execute.</p>
+        </div>
+      </div>
+
+      <div class="setup-step">
+        <div class="step-head" onclick="gtToggleStep(this)">
+          <div class="step-num">6</div>
+          <div class="step-title">XAUUSD (Gold) — special rules you must understand</div>
+          <div class="step-chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <p>Gold is filtered differently from indices. The bot requires:</p>
+          <ul>
+            <li>A liquidity sweep below/above the previous 15M candle before entry.</li>
+            <li>Strong volume confirmation after the sweep.</li>
+            <li>A minimum GodTier Decision Score of 75+ (80+ in Prop Firm mode).</li>
+            <li>Stricter spread and news filters.</li>
+          </ul>
+          <p style="margin-top:6px;">This means Gold will trade <strong>less frequently</strong> than indices. That is by design — Gold fakeouts are very common and the bot protects you from them.</p>
+        </div>
+      </div>
+
+      <div class="setup-step">
+        <div class="step-head" onclick="gtToggleStep(this)">
+          <div class="step-num">7</div>
+          <div class="step-title">Renewing your subscription</div>
+          <div class="step-chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <ol>
+            <li>Go to the <a href="index.html#payments" style="color:var(--green)">Payments page</a> on the main website.</li>
+            <li>Send your M-Pesa payment and include your license key as the reference.</li>
+            <li>Your subscription will be extended by 30 days within 24 hours (usually faster).</li>
+            <li>The bot will resume automatically — no reinstall needed.</li>
+          </ol>
+          <p style="margin-top:6px;">When your subscription expires, the bot stops opening new trades but manages any already-open trades safely.</p>
+        </div>
+      </div>
+
+      <div class="setup-step">
+        <div class="step-head" onclick="gtToggleStep(this)">
+          <div class="step-num">8</div>
+          <div class="step-title">Switching to a new device</div>
+          <div class="step-chevron">▼</div>
+        </div>
+        <div class="step-body">
+          <p>Each license is locked to one device at a time. If you get a new PC or reinstall MT5:</p>
+          <ol>
+            <li>Contact support on WhatsApp with your license key and reason.</li>
+            <li>Admin will reset your device lock within 24 hours.</li>
+            <li>Activate on your new device using the same license key.</li>
+          </ol>
+          <p style="margin-top:6px;"><strong>Do not share your license key.</strong> Sharing triggers the device lock and your access will be suspended.</p>
+        </div>
+      </div>
+
+    </div><!-- /setup-steps -->
+  </div>
+
+  <!-- Risk disclaimer -->
+  <div class="risk-disclaimer">
+    <p><strong>Risk Warning:</strong> Trading financial instruments including XAUUSD, US500, US100, and US30 carries significant risk of loss. GodTier Zero 1 is a rules-based automation tool, not a guaranteed profit system. Past performance is not indicative of future results. Never trade with money you cannot afford to lose. Always use proper risk management. LHISKEY KICK TRADES does not provide financial advice.</p>
+  </div>
+
+</div><!-- /dashboard -->
+</div><!-- /dash-wrap -->
+
+<!-- FOOTER -->
+<div class="dash-footer">
+  <p>© 2025 LHISKEY KICK TRADES. GodTier Zero 1 Bot v1.0.0</p>
+  <a href="index.html#contact">Support</a>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  JAVASCRIPT                                                   -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ── Config ──────────────────────────────────────────────────────
+const API      = '/api/bot';
+const LS_KEY   = 'gt1_license_key';
+const PAGE_SZ  = 15;
+
+// ── State ────────────────────────────────────────────────────────
+let gLicenseKey  = null;
+let gLicenseId   = null;
+let gDashData    = null;
+let gTradesPage  = 1;
+let gRiskPage    = 1;
+let gAllTrades   = [];
+let gAllRisk     = [];
+
+// ── Boot ────────────────────────────────────────────────────────
+(function init() {
+  const saved = localStorage.getItem(LS_KEY);
+  if (saved) {
+    document.getElementById('licenseInput').value = saved;
+    gtLogin(true);  // silent auto-login
+  } else {
+    hideOverlay();
+  }
+})();
+
+// ── LOGIN ────────────────────────────────────────────────────────
+async function gtLogin(silent = false) {
+  const input   = document.getElementById('licenseInput');
+  const errEl   = document.getElementById('loginError');
+  const btn     = document.getElementById('loginBtn');
+  const key     = (input.value || '').trim().toUpperCase();
+
+  errEl.textContent = '';
+  if (!key) { errEl.textContent = 'Please enter your license key.'; return; }
+
+  btn.disabled  = true;
+  btn.textContent = 'Verifying...';
+  if (!silent) showOverlay('Verifying license...');
+
+  try {
+    const res  = await apiFetch('license.check', { license_key: key, bot_version: '1.0.0' });
+
+    if (!res.ok && res.reason === 'expired') {
+      gLicenseKey = key;
+      localStorage.setItem(LS_KEY, key);
+      // Still allow dashboard view for expired — show renewal banner
+      await loadDashboard(key, res);
+      return;
+    }
+
+    if (!res.ok) {
+      errEl.textContent = res.error || res.message || 'Invalid license key.';
+      hideOverlay();
+      btn.disabled    = false;
+      btn.textContent = 'Access Dashboard';
+      return;
+    }
+
+    gLicenseKey = key;
+    gLicenseId  = res.license_id;
+    localStorage.setItem(LS_KEY, key);
+    await loadDashboard(key, res);
+
+  } catch(e) {
+    errEl.textContent = 'Connection error. Please try again.';
+    hideOverlay();
+    btn.disabled    = false;
+    btn.textContent = 'Access Dashboard';
+  }
+}
+
+// ── LOAD FULL DASHBOARD ──────────────────────────────────────────
+async function loadDashboard(key, licenseRes) {
+  showOverlay('Loading dashboard...');
+  try {
+    const dash = await apiFetch('user.dashboard', { license_key: key });
+    gDashData   = dash.dashboard || {};
+
+    // Show dashboard, hide login
+    document.getElementById('loginGate').style.display = 'none';
+    document.getElementById('dashboard').style.display  = 'block';
+
+    // Display license key in setup guide
+    const displayEl = document.getElementById('displayLicKey');
+    if (displayEl) displayEl.textContent = key;
+
+    populateStatusCards(licenseRes, dash, gDashData);
+    populatePerformance(gDashData.trade_summary);
+    populateDevice(gDashData.device);
+    renderRenewalBanner(licenseRes);
+
+    // Load trades and risk events
+    await Promise.all([gtLoadTrades(), gtLoadRiskEvents()]);
+
+  } catch(e) {
+    console.error('[GT] loadDashboard error:', e);
+    showToast('Dashboard load error: ' + e.message, 'err');
+  } finally {
+    hideOverlay();
+    const btn = document.getElementById('loginBtn');
+    if (btn) { btn.disabled = false; btn.textContent = 'Access Dashboard'; }
+  }
+}
+
+// ── STATUS CARDS ─────────────────────────────────────────────────
+function populateStatusCards(licenseRes, dash, data) {
+  const sub    = data.subscription;
+  const lic    = data.license || {};
+  const hb     = data.last_heartbeat;
+  const mode   = licenseRes.mode || lic.mode || 'standard';
+  const days   = licenseRes.days_left ?? dash.days_left ?? 0;
+  const expiry = licenseRes.expires_at || lic.expires_at;
+
+  // Subscription
+  const subStatus = sub?.status || licenseRes.reason || 'unknown';
+  setCard('cardSubscription', subStatus === 'active' ? 'card-ok' : 'card-danger');
+  setVal('scSubStatus', capitalise(subStatus), subStatus === 'active' ? 'green' : 'red');
+  setVal('scSubPlan', capitalise(sub?.plan_name || mode) + ' Plan');
+
+  // Expiry
+  const daysNum = parseInt(days) || 0;
+  setCard('cardExpiry', daysNum > 7 ? 'card-ok' : daysNum > 0 ? 'card-warn' : 'card-danger');
+  setVal('scDaysLeft', daysNum > 0 ? daysNum + ' days' : 'Expired', daysNum > 7 ? 'green' : daysNum > 0 ? 'yellow' : 'red');
+  setVal('scExpiryDate', expiry ? fmtDate(expiry) : '—');
+  const pct = Math.min(100, Math.max(0, (daysNum / 30) * 100));
+  const bar  = document.getElementById('expiryBar');
+  if (bar) {
+    bar.style.width = pct + '%';
+    bar.style.background = daysNum > 7 ? 'var(--green)' : daysNum > 0 ? 'var(--yellow)' : 'var(--red)';
+  }
+
+  // Device
+  const dev = data.device;
+  setCard('cardDevice', dev ? 'card-ok' : 'card-warn');
+  setVal('scDeviceStatus', dev ? 'Bound' : 'Not Bound', dev ? 'green' : 'yellow');
+  setVal('scDeviceName', dev?.device_label || dev?.broker_name || (dev ? 'Device active' : 'Activate bot to bind'));
+
+  // Mode
+  const modeDescs = {
+    conservative: 'Strict filters, low risk',
+    standard:     'Balanced — default',
+    aggressive:   'More trades, higher risk',
+    prop_firm:    'Max protection, strict rules',
+    demo:         'Signal logging only, no real trades'
+  };
+  setCard('cardMode', 'card-ok');
+  setVal('scMode', capitalise(mode).replace('_', ' '));
+  setVal('scModeDesc', modeDescs[mode] || '—');
+
+  // License
+  const licStatus = licenseRes.ok ? 'active' : (licenseRes.reason || 'inactive');
+  setCard('cardLicense', licStatus === 'active' ? 'card-ok' : 'card-danger');
+  setVal('scLicStatus', capitalise(licStatus), licStatus === 'active' ? 'green' : 'red');
+  setVal('scLicId', gLicenseId ? gLicenseId.slice(0, 16) + '…' : '—');
+
+  // Last heartbeat
+  if (hb) {
+    const hbAge = Math.floor((Date.now() - new Date(hb.created_at)) / 60000);
+    const hbOk  = hbAge < 30;
+    setCard('cardLastSeen', hbOk ? 'card-ok' : 'card-warn');
+    setVal('scLastSeen', hbOk ? hbAge + ' min ago' : hbAge + ' min ago', hbOk ? 'green' : 'yellow');
+    setVal('scLastSeenSub', hb.broker_name ? 'Broker: ' + hb.broker_name : 'Bot running');
+  } else {
+    setCard('cardLastSeen', 'card-warn');
+    setVal('scLastSeen', 'No signal');
+    setVal('scLastSeenSub', 'Bot not yet started');
+  }
+}
+
+function setCard(id, cls) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'status-card ' + cls;
+}
+
+function setVal(id, text, colorClass) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  if (colorClass) {
+    el.className = el.className.replace(/\b(green|red|yellow)\b/g, '').trim() + ' ' + colorClass;
+  }
+}
+
+// ── RENEWAL BANNER ────────────────────────────────────────────────
+function renderRenewalBanner(licenseRes) {
+  const banner  = document.getElementById('renewalBanner');
+  const msgEl   = document.getElementById('renewalMsg');
+  const days    = licenseRes.days_left ?? 999;
+
+  if (!licenseRes.ok && licenseRes.reason === 'expired') {
+    banner.classList.remove('hidden');
+    msgEl.textContent = '⚠ Your subscription has expired. Renew now to resume bot trading.';
+  } else if (parseInt(days) <= 7 && parseInt(days) >= 0) {
+    banner.classList.remove('hidden');
+    msgEl.textContent = `⚠ Your subscription expires in ${days} day(s). Renew now to avoid interruption.`;
+  } else {
+    banner.classList.add('hidden');
+  }
+}
+
+// ── PERFORMANCE ───────────────────────────────────────────────────
+function populatePerformance(summary) {
+  if (!summary) return;
+  const total   = parseInt(summary.total_trades) || 0;
+  const wins    = parseInt(summary.wins) || 0;
+  const losses  = parseInt(summary.losses) || 0;
+  const pnl     = parseFloat(summary.total_pnl_usd) || 0;
+  const avgRR   = parseFloat(summary.avg_rr) || 0;
+  const avgScr  = parseFloat(summary.avg_score) || 0;
+  const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : '0.0';
+
+  document.getElementById('pfTotal').textContent   = total;
+  document.getElementById('pfWins').textContent    = wins;
+  document.getElementById('pfLosses').textContent  = losses;
+  document.getElementById('pfWinRate').textContent = winRate + '%';
+
+  const pnlEl = document.getElementById('pfPnl');
+  pnlEl.textContent = (pnl >= 0 ? '+' : '') + pnl.toFixed(2);
+  pnlEl.className   = 'pv ' + (pnl >= 0 ? 'pv-green' : 'pv-red');
+
+  document.getElementById('pfAvgRR').textContent    = avgRR.toFixed(2);
+  document.getElementById('pfAvgScore').textContent = Math.round(avgScr);
+}
+
+// ── DEVICE ───────────────────────────────────────────────────────
+function populateDevice(dev) {
+  const wrap = document.getElementById('deviceWrap');
+  if (!wrap) return;
+
+  if (!dev) {
+    wrap.innerHTML = `<div class="empty-state"><div class="es-icon">💻</div>No device bound yet. Start the bot on MT5 to bind your device.</div>`;
+    return;
+  }
+
+  const statusClass = dev.status === 'active' ? 'pill-active' : dev.status === 'reset_pending' ? 'pill-reset' : 'pill-none';
+  const statusText  = dev.status === 'active' ? 'Bound & Active' : dev.status === 'reset_pending' ? 'Reset Pending' : dev.status;
+  const lastSeen    = dev.last_seen_at ? fmtDate(dev.last_seen_at) : '—';
+
+  wrap.innerHTML = `
+    <div class="device-card">
+      <div class="device-info">
+        <div class="device-name">💻 ${esc(dev.device_label || 'MT5 Device')}</div>
+        <div class="device-meta">Broker: ${esc(dev.broker_name || '—')} &nbsp;|&nbsp; Last seen: ${lastSeen}</div>
+        <div class="device-meta" style="margin-top:2px;">Bot version: ${esc(dev.bot_version || '—')}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span class="device-status-pill ${statusClass}">${statusText}</span>
+        <button class="device-reset-btn" onclick="gtRequestDeviceReset()">Request Device Reset</button>
+      </div>
+    </div>`;
+}
+
+// ── TRADES ───────────────────────────────────────────────────────
+async function gtLoadTrades() {
+  const tbody    = document.getElementById('tradeTbody');
+  const symbol   = document.getElementById('tradeSymbolFilter')?.value || '';
+  const status   = document.getElementById('tradeStatusFilter')?.value || '';
+
+  tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:24px;color:var(--muted);">Loading...</td></tr>`;
+
+  try {
+    const res = await apiFetch('user.trades', {
+      license_key: gLicenseKey,
+      page:        gTradesPage,
+      limit:       PAGE_SZ,
+      symbol:      symbol || undefined,
+      status:      status || undefined
+    });
+
+    gAllTrades = res.trades || [];
+
+    if (gAllTrades.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="14"><div class="empty-state"><div class="es-icon">📊</div>No trades recorded yet. The bot will log trades here as it executes.</div></td></tr>`;
+      document.getElementById('tradePagination').innerHTML = '';
+      return;
+    }
+
+    tbody.innerHTML = gAllTrades.map(t => {
+      const pnl      = t.profit_loss_usd != null ? parseFloat(t.profit_loss_usd) : null;
+      const pnlHtml  = pnl == null ? '<span class="td-muted">—</span>' :
+        `<span class="${pnl >= 0 ? 'badge-win' : 'badge-loss'}">${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}</span>`;
+      const scoreHtml = t.decision_score != null ?
+        `<span class="score-chip ${t.decision_score >= 85 ? 'score-premium' : t.decision_score >= 75 ? 'score-good' : 'score-low'}">${t.decision_score}</span>` : '—';
+
+      return `<tr>
+        <td><strong>${esc(t.symbol)}</strong></td>
+        <td><span class="badge badge-${t.direction?.toLowerCase()}">${t.direction}</span></td>
+        <td class="td-muted">${esc(t.session_name || '—')}</td>
+        <td>${scoreHtml}</td>
+        <td class="td-mono">${t.entry_price ?? '—'}</td>
+        <td class="td-mono">${t.stop_loss ?? '—'}</td>
+        <td class="td-mono">${t.take_profit ?? '—'}</td>
+        <td class="td-muted">${t.lot_size ?? '—'}</td>
+        <td class="td-muted">${t.risk_percent != null ? t.risk_percent + '%' : '—'}</td>
+        <td><span class="badge badge-${t.status}">${t.status}</span></td>
+        <td>${pnlHtml}</td>
+        <td class="td-muted">${t.rr_achieved != null ? parseFloat(t.rr_achieved).toFixed(2) : '—'}</td>
+        <td class="td-muted">${esc(t.close_reason || '—')}</td>
+        <td class="td-muted" style="font-size:.72rem;">${t.opened_at ? fmtDate(t.opened_at) : '—'}</td>
+      </tr>`;
+    }).join('');
+
+    // Simple pagination — previous/next only (API handles pages)
+    renderPagination('tradePagination', gAllTrades.length, gTradesPage, PAGE_SZ, p => {
+      gTradesPage = p; gtLoadTrades();
+    });
+
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:20px;color:var(--red);">Error loading trades: ${esc(e.message)}</td></tr>`;
+  }
+}
+
+// ── RISK EVENTS ───────────────────────────────────────────────────
+async function gtLoadRiskEvents() {
+  const wrap = document.getElementById('riskWrap');
+  wrap.innerHTML = `<div class="empty-state">Loading...</div>`;
+
+  try {
+    const res  = await apiFetch('user.risk-events', {
+      license_key: gLicenseKey,
+      page:        gRiskPage,
+      limit:       PAGE_SZ
+    });
+
+    gAllRisk = res.events || [];
+
+    if (gAllRisk.length === 0) {
+      wrap.innerHTML = `<div class="empty-state"><div class="es-icon">🛡</div>No risk events recorded. The bot will log protection triggers here.</div>`;
+      document.getElementById('riskPagination').innerHTML = '';
+      return;
+    }
+
+    const sevIcon = { critical:'🔴', high:'🟠', medium:'🟡', low:'⚪' };
+
+    wrap.innerHTML = gAllRisk.map(r => `
+      <div class="risk-item risk-sev-${r.severity}">
+        <div class="risk-icon">${sevIcon[r.severity] || '⚪'}</div>
+        <div class="risk-body">
+          <div class="risk-type">${esc(r.event_type?.replace(/_/g,' ') || '—')}${r.symbol ? ' — ' + r.symbol : ''}</div>
+          <div class="risk-msg">${esc(r.message || '—')}</div>
+          <div class="risk-time">${r.created_at ? fmtDate(r.created_at) : '—'}${r.session_name ? ' · ' + r.session_name : ''}</div>
+        </div>
+      </div>`).join('');
+
+    renderPagination('riskPagination', gAllRisk.length, gRiskPage, PAGE_SZ, p => {
+      gRiskPage = p; gtLoadRiskEvents();
+    });
+
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty-state" style="color:var(--red)">Error loading risk events: ${esc(e.message)}</div>`;
+  }
+}
+
+// ── DEVICE RESET REQUEST ──────────────────────────────────────────
+async function gtRequestDeviceReset() {
+  if (!confirm('Request a device reset? Admin will review within 24 hours and clear your device lock so you can rebind.\n\nYou can also contact support on WhatsApp for faster processing.')) return;
+  try {
+    const res = await apiFetch('device.reset-request', { license_key: gLicenseKey, reason: 'User requested from dashboard' });
+    showToast(res.message || 'Reset request submitted.', 'ok');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'err');
+  }
+}
+
+// ── DOWNLOAD CHECK ────────────────────────────────────────────────
+function gtCheckDownload(e, type) {
+  e.preventDefault();
+  if (!gLicenseKey) { showToast('Please log in first.', 'err'); return; }
+
+  // Files are served from /bot-files/ — admin uploads via Bot Files tab
+  // If file not yet available, show support message
+  const files = {
+    ea:     '/bot-files/GodTierZero1.ex5',
+    python: '/bot-files/GodTierZero1-Bridge.zip',
+    guide:  '/bot-files/GodTierZero1-Setup-Guide.pdf'
+  };
+
+  if (files[type]) {
+    window.location.href = files[type];
+  } else {
+    showToast('File not yet available. Contact support on WhatsApp.', 'err');
+  }
+}
+
+// ── SETUP GUIDE ACCORDION ─────────────────────────────────────────
+function gtToggleStep(head) {
+  const body     = head.nextElementSibling;
+  const chevron  = head.querySelector('.step-chevron');
+  const isOpen   = body.classList.contains('open');
+
+  // Close all
+  document.querySelectorAll('.step-body').forEach(b => b.classList.remove('open'));
+  document.querySelectorAll('.step-chevron').forEach(c => c.classList.remove('open'));
+
+  if (!isOpen) {
+    body.classList.add('open');
+    chevron.classList.add('open');
+  }
+}
+
+// ── LOGOUT ────────────────────────────────────────────────────────
+function gtLogout() {
+  localStorage.removeItem(LS_KEY);
+  gLicenseKey = null;
+  gLicenseId  = null;
+  gDashData   = null;
+  document.getElementById('dashboard').style.display  = 'none';
+  document.getElementById('loginGate').style.display  = 'flex';
+  document.getElementById('licenseInput').value = '';
+  document.getElementById('loginError').textContent = '';
+  showToast('Signed out.', 'ok');
+}
+
+// ── API HELPER ────────────────────────────────────────────────────
+async function apiFetch(action, body) {
+  const res = await fetch(`${API}?action=${encodeURIComponent(action)}`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(body)
+  });
+  if (!res.ok && res.status >= 500) throw new Error('Server error ' + res.status);
+  return await res.json();
+}
+
+// ── UTILITIES ─────────────────────────────────────────────────────
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) +
+    ' ' + d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+}
+
+function esc(str) {
+  if (str == null) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function capitalise(str) {
+  if (!str) return '—';
+  return str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g,' ');
+}
+
+function renderPagination(containerId, count, currentPage, pageSize, onPage) {
+  const container  = document.getElementById(containerId);
+  if (!container) return;
+  let html = '';
+  if (currentPage > 1)          html += `<button class="pg-btn" onclick="(${onPage.toString()})(${currentPage - 1})">‹ Prev</button>`;
+  html += `<span style="font-size:.78rem;color:var(--muted);padding:5px 8px;">Page ${currentPage}</span>`;
+  if (count >= pageSize)        html += `<button class="pg-btn" onclick="(${onPage.toString()})(${currentPage + 1})">Next ›</button>`;
+  container.innerHTML = html;
+}
+
+function showOverlay(msg) {
+  const el = document.getElementById('loadingOverlay');
+  const p  = el.querySelector('p');
+  if (p) p.textContent = msg || 'Loading...';
+  el.classList.remove('hidden');
+}
+
+function hideOverlay() {
+  document.getElementById('loadingOverlay').classList.add('hidden');
+}
+
+let _toastTimer;
+function showToast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = `show toast-${type === 'err' ? 'err' : 'ok'}`;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.className = ''; }, 3500);
+}
+</script>
+</body>
+</html>
