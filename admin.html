@@ -36,6 +36,7 @@
       <button type="button" class="tab" data-tab="livechat" onclick="switchTab('livechat')">Live Chat</button>
       <button type="button" class="tab" data-tab="handoffs" onclick="switchTab('handoffs')">Handoffs</button>
       <button type="button" class="tab" data-tab="assistant" onclick="switchTab('assistant')">AI Assistant</button>
+      <button type="button" class="tab tab-godtier" data-tab="godtier" onclick="switchTab('godtier')">⚡ GodTier Bot</button>
       <button type="button" class="tab tab-logout" onclick="logoutAdmin()">Logout</button>
     </nav>
 
@@ -860,6 +861,282 @@
           </div>
         </div>
       </div>
+
+      <!-- ══════════════════════════════════════════════════════
+           GODTIER ZERO 1 BOT — ADMIN TAB PANEL
+           ══════════════════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-godtier">
+
+        <div class="panel-head">
+          <div>
+            <p class="section-tag">→ GodTier Zero 1 Bot</p>
+            <h2>Bot Command Center</h2>
+            <p class="muted">Monitor subscribers, licenses, devices, trades, risk events and system controls.</p>
+          </div>
+          <button onclick="loadGodtierOverview()">↻ Refresh</button>
+        </div>
+
+        <!-- Stat cards -->
+        <div class="gt-stats-row">
+          <div class="stat-card gt-stat"><span id="gtStatActive">—</span><p>Active Subscribers</p></div>
+          <div class="stat-card gt-stat"><span id="gtStatExpired">—</span><p>Expired</p></div>
+          <div class="stat-card gt-stat"><span id="gtStatLicenses">—</span><p>Active Licenses</p></div>
+          <div class="stat-card gt-stat"><span id="gtStatDevices">—</span><p>Active Devices</p></div>
+          <div class="stat-card gt-stat"><span id="gtStatTodayTrades">—</span><p>Trades Today</p></div>
+          <div class="stat-card gt-stat"><span id="gtStatOpenTrades">—</span><p>Open Trades</p></div>
+          <div class="stat-card gt-stat"><span id="gtStatKill" style="color:var(--green)">OFF</span><p>Kill Switch</p></div>
+          <div class="stat-card gt-stat"><span id="gtStatCritical" style="color:var(--red)">—</span><p>Critical Alerts 24h</p></div>
+        </div>
+
+        <!-- Kill Switch -->
+        <div class="form-card gt-kill-card">
+          <p class="section-tag" style="color:var(--red)">→ Global Kill Switch</p>
+          <p class="muted">Activating this stops ALL running bots at their next heartbeat (5–15 mins). Use only for emergencies. Open trades are NOT force-closed — bot manages them safely.</p>
+          <div class="gt-kill-row">
+            <input id="gtKillReason" type="text" placeholder="Reason (e.g. Market emergency, maintenance)"/>
+            <button onclick="gtToggleKillSwitch(true)" class="gt-btn-danger">🔴 ACTIVATE</button>
+            <button onclick="gtToggleKillSwitch(false)" class="gt-btn-safe">🟢 DEACTIVATE</button>
+          </div>
+          <p class="muted gt-small-msg" id="gtKillMsg"></p>
+        </div>
+
+        <!-- Sub-tabs -->
+        <div class="gt-subtabs">
+          <button class="gt-subtab active" onclick="gtSwitchSubTab('subscribers')">Subscribers</button>
+          <button class="gt-subtab" onclick="gtSwitchSubTab('licenses')">Licenses</button>
+          <button class="gt-subtab" onclick="gtSwitchSubTab('trades')">Trade Logs</button>
+          <button class="gt-subtab" onclick="gtSwitchSubTab('risklogs')">Risk Events</button>
+          <button class="gt-subtab" onclick="gtSwitchSubTab('config')">Bot Config</button>
+          <button class="gt-subtab" onclick="gtSwitchSubTab('actions')">Admin Actions</button>
+        </div>
+
+        <!-- SUBSCRIBERS -->
+        <div class="gt-subpanel active" id="gtPanel-subscribers">
+          <div class="gt-panel-toolbar">
+            <select id="gtSubStatusFilter" onchange="loadGodtierSubscribers()">
+              <option value="">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="expired">Expired</option>
+              <option value="pending">Pending</option>
+              <option value="suspended">Suspended</option>
+            </select>
+            <button onclick="gtExportSubscribersCSV()" class="gt-btn-outline">↓ Export CSV</button>
+          </div>
+          <div class="table-wrap">
+            <table><thead><tr>
+              <th>User ID</th><th>Plan</th><th>Status</th><th>Payment Ref</th>
+              <th>Provider</th><th>Amount</th><th>Started</th><th>Expires</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="gtSubscribersTbody"><tr><td colspan="9" class="gt-loading">Loading...</td></tr></tbody>
+            </table>
+          </div>
+          <div id="gtSubPagination" class="gt-pagination"></div>
+        </div>
+
+        <!-- LICENSES -->
+        <div class="gt-subpanel" id="gtPanel-licenses">
+          <div class="gt-panel-toolbar">
+            <select id="gtLicStatusFilter" onchange="loadGodtierLicenses()">
+              <option value="">All</option>
+              <option value="active">Active</option>
+              <option value="expired">Expired</option>
+              <option value="revoked">Revoked</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table><thead><tr>
+              <th>License ID</th><th>User ID</th><th>Mode</th><th>Status</th>
+              <th>Device Bound</th><th>Kill Switch</th><th>Expires</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="gtLicensesTbody"><tr><td colspan="8" class="gt-loading">Loading...</td></tr></tbody>
+            </table>
+          </div>
+          <div id="gtLicPagination" class="gt-pagination"></div>
+        </div>
+
+        <!-- TRADE LOGS -->
+        <div class="gt-subpanel" id="gtPanel-trades">
+          <div class="gt-panel-toolbar">
+            <select id="gtTradeSymbolFilter" onchange="loadGodtierTrades()">
+              <option value="">All Symbols</option>
+              <option value="XAUUSD">XAUUSD</option>
+              <option value="US500">US500</option>
+              <option value="US100">US100</option>
+              <option value="US30">US30</option>
+            </select>
+            <select id="gtTradeStatusFilter" onchange="loadGodtierTrades()">
+              <option value="">All</option>
+              <option value="open">Open</option>
+              <option value="closed">Closed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table><thead><tr>
+              <th>User</th><th>Symbol</th><th>Dir</th><th>Session</th><th>Score</th>
+              <th>Mode</th><th>Entry</th><th>SL</th><th>TP</th><th>Lots</th>
+              <th>Risk%</th><th>Status</th><th>P/L USD</th><th>RR</th><th>Close Reason</th><th>Opened</th>
+            </tr></thead>
+            <tbody id="gtTradesTbody"><tr><td colspan="16" class="gt-loading">Loading...</td></tr></tbody>
+            </table>
+          </div>
+          <div id="gtTradePagination" class="gt-pagination"></div>
+        </div>
+
+        <!-- RISK EVENTS -->
+        <div class="gt-subpanel" id="gtPanel-risklogs">
+          <div class="table-wrap">
+            <table><thead><tr>
+              <th>User</th><th>Type</th><th>Severity</th><th>Symbol</th>
+              <th>Message</th><th>Mode</th><th>Failed Filter</th><th>Time</th>
+            </tr></thead>
+            <tbody id="gtRiskTbody"><tr><td colspan="8" class="gt-loading">Loading...</td></tr></tbody>
+            </table>
+          </div>
+          <div id="gtRiskPagination" class="gt-pagination"></div>
+        </div>
+
+        <!-- BOT CONFIG -->
+        <div class="gt-subpanel" id="gtPanel-config">
+          <div class="gt-panel-toolbar">
+            <select id="gtConfigProfileSelect" onchange="loadGodtierConfigProfile()">
+              <option value="">Select profile...</option>
+            </select>
+            <button onclick="gtPushConfig()" class="gt-btn-safe">Push Config →</button>
+          </div>
+          <div id="gtConfigForm" style="display:none;">
+            <div class="form-grid two">
+              <div class="form-card">
+                <p class="section-tag">→ Risk Settings</p>
+                <label>Default Risk %</label><input type="number" id="gtcDefaultRisk" step="0.1" min="0.1" max="5"/>
+                <label>Max Risk %</label><input type="number" id="gtcMaxRisk" step="0.1" min="0.1" max="5"/>
+                <label>Admin Hard Cap %</label><input type="number" id="gtcHardCap" step="0.1" min="0.1" max="5"/>
+                <label>Max Daily Loss %</label><input type="number" id="gtcDailyLoss" step="0.1" min="0.5" max="20"/>
+                <label>Max Daily Profit %</label><input type="number" id="gtcDailyProfit" step="0.1" min="1" max="50"/>
+                <label>Max Trades/Day</label><input type="number" id="gtcMaxTradesDay" min="1" max="20"/>
+                <label>Max Trades/Session</label><input type="number" id="gtcMaxTradesSess" min="1" max="10"/>
+                <label>Max Consecutive Losses</label><input type="number" id="gtcMaxLosses" min="1" max="10"/>
+                <label>Max Active Symbols</label><input type="number" id="gtcMaxSymbols" min="1" max="4"/>
+                <label>Max Total Risk %</label><input type="number" id="gtcTotalRisk" step="0.1" min="0.5" max="10"/>
+                <label>Max Index Group Risk %</label><input type="number" id="gtcIndexRisk" step="0.1" min="0.5" max="5"/>
+                <label>Max XAUUSD Risk %</label><input type="number" id="gtcGoldRisk" step="0.1" min="0.1" max="3"/>
+              </div>
+              <div class="form-card">
+                <p class="section-tag">→ Decision Score Thresholds</p>
+                <label>Min Score (Standard)</label><input type="number" id="gtcScoreStd" min="50" max="100"/>
+                <label>Min Score (Aggressive)</label><input type="number" id="gtcScoreAgg" min="50" max="100"/>
+                <label>Min Score (XAUUSD)</label><input type="number" id="gtcScoreGold" min="50" max="100"/>
+                <label>Min Score (Prop Firm)</label><input type="number" id="gtcScoreProp" min="50" max="100"/>
+                <p class="section-tag" style="margin-top:16px">→ ATR Settings</p>
+                <label>ATR Period</label><input type="number" id="gtcAtrPeriod" min="5" max="50"/>
+                <label>ATR SL Multiplier</label><input type="number" id="gtcAtrMult" step="0.1" min="0.5" max="5"/>
+                <label>Default RR</label><input type="number" id="gtcDefaultRR" step="0.1" min="1" max="10"/>
+                <label>Strong Volume RR</label><input type="number" id="gtcStrongRR" step="0.1" min="1" max="10"/>
+                <p class="section-tag" style="margin-top:16px">→ Volume Settings</p>
+                <label>Volume Avg Period</label><input type="number" id="gtcVolPeriod" min="5" max="50"/>
+                <label>Min Breakout Volume (x avg)</label><input type="number" id="gtcVolMin" step="0.1" min="1" max="5"/>
+                <label>Strong Volume (x avg)</label><input type="number" id="gtcVolStrong" step="0.1" min="1" max="5"/>
+                <label>XAUUSD Min Volume (x avg)</label><input type="number" id="gtcVolGold" step="0.1" min="1" max="5"/>
+              </div>
+              <div class="form-card">
+                <p class="section-tag">→ Max Spread (pips)</p>
+                <label>US500</label><input type="number" id="gtcSpreadUS500" step="0.5" min="0.5" max="20"/>
+                <label>US100</label><input type="number" id="gtcSpreadUS100" step="0.5" min="0.5" max="20"/>
+                <label>US30</label><input type="number" id="gtcSpreadUS30" step="0.5" min="0.5" max="30"/>
+                <label>XAUUSD</label><input type="number" id="gtcSpreadXAU" step="1" min="5" max="100"/>
+                <p class="section-tag" style="margin-top:16px">→ Session Windows</p>
+                <label>London Window (mins)</label><input type="number" id="gtcLondonWin" min="30" max="240"/>
+                <label>New York Window (mins)</label><input type="number" id="gtcNYWin" min="30" max="240"/>
+              </div>
+              <div class="form-card">
+                <p class="section-tag">→ News Filter</p>
+                <label>Pause Before News (mins)</label><input type="number" id="gtcNewsBefore" min="0" max="60"/>
+                <label>Pause After News (mins)</label><input type="number" id="gtcNewsAfter" min="0" max="60"/>
+                <label>XAUUSD Extra Pause (mins)</label><input type="number" id="gtcNewsGold" min="0" max="60"/>
+                <p class="section-tag" style="margin-top:16px">→ XAUUSD Special Rules</p>
+                <label class="gt-check-label"><input type="checkbox" id="gtcGoldSweep"/> Require Liquidity Sweep Before Entry</label>
+                <label>Sweep Delay (mins)</label><input type="number" id="gtcGoldDelay" min="0" max="15"/>
+                <label>XAUUSD Min Score</label><input type="number" id="gtcGoldScore" min="50" max="100"/>
+                <p class="section-tag" style="margin-top:16px">→ Trade Management</p>
+                <label class="gt-check-label"><input type="checkbox" id="gtcBreakeven"/> Move to Breakeven after 1R</label>
+                <label class="gt-check-label"><input type="checkbox" id="gtcPartial"/> Partial Close at 2R</label>
+                <label class="gt-check-label"><input type="checkbox" id="gtcTrail"/> ATR Trail after 2R</label>
+                <label class="gt-check-label"><input type="checkbox" id="gtcCloseNews"/> Close Before High-Impact News</label>
+                <p class="section-tag" style="margin-top:16px">→ Version Control</p>
+                <label>Min Bot Version</label><input type="text" id="gtcMinVersion" placeholder="1.0.0"/>
+              </div>
+            </div>
+            <div class="gt-config-actions">
+              <button onclick="gtPushConfig()" class="gt-btn-safe">✓ Push Config to All Bots</button>
+              <button onclick="loadGodtierConfigProfile()" class="gt-btn-outline">↺ Reset to Saved</button>
+            </div>
+            <p class="muted gt-small-msg" id="gtConfigMsg"></p>
+          </div>
+        </div>
+
+        <!-- ADMIN ACTIONS -->
+        <div class="gt-subpanel" id="gtPanel-actions">
+          <div class="table-wrap">
+            <table><thead><tr>
+              <th>Admin</th><th>Action</th><th>Target User</th><th>Description</th><th>Time</th>
+            </tr></thead>
+            <tbody id="gtActionsTbody"><tr><td colspan="5" class="gt-loading">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- EXTEND MODAL -->
+        <div id="gtExtendModal" class="gt-modal">
+          <div class="form-card gt-modal-box">
+            <p class="section-tag">→ Extend Subscription</p>
+            <input type="hidden" id="gtExtendUserId"/>
+            <input type="hidden" id="gtExtendLicId"/>
+            <label>Extra Days</label>
+            <input type="number" id="gtExtendDays" value="30" min="1" max="365"/>
+            <label>Reason</label>
+            <input type="text" id="gtExtendReason" placeholder="e.g. Manual renewal, goodwill"/>
+            <div class="gt-modal-btns">
+              <button onclick="gtConfirmExtend()" class="gt-btn-safe">Confirm</button>
+              <button onclick="gtCloseModal('gtExtendModal')" class="gt-btn-outline">Cancel</button>
+            </div>
+            <p class="muted gt-small-msg" id="gtExtendMsg"></p>
+          </div>
+        </div>
+
+        <!-- DISABLE MODAL -->
+        <div id="gtDisableModal" class="gt-modal">
+          <div class="form-card gt-modal-box">
+            <p class="section-tag" style="color:var(--red)">→ Disable User / License</p>
+            <input type="hidden" id="gtDisableUserId"/>
+            <input type="hidden" id="gtDisableLicId"/>
+            <label>Reason</label>
+            <input type="text" id="gtDisableReason" placeholder="e.g. Suspected sharing, payment dispute"/>
+            <div class="gt-modal-btns">
+              <button onclick="gtConfirmDisable()" class="gt-btn-danger">Confirm Disable</button>
+              <button onclick="gtCloseModal('gtDisableModal')" class="gt-btn-outline">Cancel</button>
+            </div>
+            <p class="muted gt-small-msg" id="gtDisableMsg"></p>
+          </div>
+        </div>
+
+        <!-- RESET DEVICE MODAL -->
+        <div id="gtResetModal" class="gt-modal">
+          <div class="form-card gt-modal-box">
+            <p class="section-tag">→ Reset Device Lock</p>
+            <input type="hidden" id="gtResetLicId"/>
+            <input type="hidden" id="gtResetUserId"/>
+            <label>Reason</label>
+            <input type="text" id="gtResetReason" placeholder="e.g. New PC, fresh MT5 install"/>
+            <div class="gt-modal-btns">
+              <button onclick="gtConfirmReset()" class="gt-btn-safe">Confirm Reset</button>
+              <button onclick="gtCloseModal('gtResetModal')" class="gt-btn-outline">Cancel</button>
+            </div>
+            <p class="muted gt-small-msg" id="gtResetMsg"></p>
+          </div>
+        </div>
+
+      </div><!-- /tab-panel#tab-godtier -->
 
       <p class="message global" id="dashboardMessage"></p>
     </section>

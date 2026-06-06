@@ -1289,3 +1289,178 @@ td:nth-child(2){color:var(--text);}
 #tab-livechat .panel-head .actions .ghost-btn{
   white-space:nowrap;
 }
+
+/* ══════════════════════════════════════════════════════════
+   GODTIER ZERO 1 BOT — ADMIN STYLES
+   ══════════════════════════════════════════════════════════ */
+
+/* Tab button */
+.tab-godtier { border-left: 2px solid var(--green) !important; }
+
+/* Stats row */
+.gt-stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.gt-stat span { font-size: 1.6rem; font-weight: 700; color: var(--green); display: block; }
+.gt-stat p    { font-size: .75rem; color: var(--muted); margin: 4px 0 0; }
+
+/* Kill switch card */
+.gt-kill-card  { border: 1px solid var(--red) !important; margin-bottom: 18px; }
+.gt-kill-row   { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+.gt-kill-row input { flex: 1; min-width: 200px; }
+
+/* Buttons */
+.gt-btn-danger  { background: var(--red)   !important; color: #fff !important; }
+.gt-btn-safe    { background: var(--green) !important; color: #000 !important; }
+.gt-btn-outline {
+  background: transparent !important;
+  color: var(--green) !important;
+  border: 1px solid var(--green) !important;
+  font-size: .82rem;
+  padding: 6px 14px;
+}
+.gt-btn-sm {
+  font-size: .76rem;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+}
+
+/* Sub-tabs */
+.gt-subtabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.gt-subtab {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: .85rem;
+  transition: color .2s, border-color .2s;
+  border-radius: 0;
+}
+.gt-subtab:hover  { color: var(--text); }
+.gt-subtab.active { color: var(--green); border-bottom-color: var(--green); }
+
+/* Sub-panels */
+.gt-subpanel        { display: none; }
+.gt-subpanel.active { display: block; }
+
+/* Panel toolbar */
+.gt-panel-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+/* Table loading cell */
+.gt-loading {
+  text-align: center;
+  padding: 24px;
+  color: var(--muted);
+}
+
+/* Badges */
+.gt-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: .72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.gt-badge-active    { background: rgba(0,255,136,.15); color: var(--green); }
+.gt-badge-expired   { background: rgba(255,80,80,.15);  color: var(--red); }
+.gt-badge-pending   { background: rgba(255,200,0,.15);  color: #ffc800; }
+.gt-badge-suspended { background: rgba(255,80,80,.25);  color: var(--red); }
+.gt-badge-revoked   { background: rgba(150,150,150,.2); color: var(--muted); }
+.gt-badge-open      { background: rgba(0,255,136,.15);  color: var(--green); }
+.gt-badge-closed    { background: rgba(150,150,150,.2); color: var(--muted); }
+.gt-badge-buy       { background: rgba(0,255,136,.15);  color: var(--green); }
+.gt-badge-sell      { background: rgba(255,80,80,.15);  color: var(--red); }
+.gt-badge-critical  { background: rgba(255,80,80,.3);   color: var(--red); }
+.gt-badge-high      { background: rgba(255,150,0,.2);   color: #ff9600; }
+.gt-badge-medium    { background: rgba(255,200,0,.15);  color: #ffc800; }
+.gt-badge-low       { background: rgba(150,150,150,.2); color: var(--muted); }
+.gt-badge-kill-on   { background: rgba(255,80,80,.3);   color: var(--red); }
+.gt-badge-kill-off  { background: rgba(0,255,136,.15);  color: var(--green); }
+.gt-badge-yes       { background: rgba(0,255,136,.15);  color: var(--green); }
+.gt-badge-no        { background: rgba(150,150,150,.2); color: var(--muted); }
+
+/* Pagination */
+.gt-pagination { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.gt-page-btn {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: .8rem;
+}
+.gt-page-btn.active { border-color: var(--green); color: var(--green); }
+
+/* Config form actions */
+.gt-config-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+/* Small message text */
+.gt-small-msg { font-size: .82rem; margin-top: 8px; }
+
+/* Checkbox labels */
+.gt-check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-bottom: 6px;
+}
+.gt-check-label input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  accent-color: var(--green);
+}
+
+/* Modals */
+.gt-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.75);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
+.gt-modal.open { display: flex; }
+.gt-modal-box  { min-width: 300px; max-width: 440px; width: 90%; }
+.gt-modal-btns { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+/* P/L colour */
+.gt-pnl-pos { color: var(--green); font-weight: 600; }
+.gt-pnl-neg { color: var(--red);   font-weight: 600; }
+
+/* User ID short display */
+.gt-uid { font-family: monospace; font-size: .78rem; color: var(--muted); }
+
+/* Responsive */
+@media(max-width:700px) {
+  .gt-stats-row { grid-template-columns: repeat(2, 1fr); }
+  .gt-kill-row  { flex-direction: column; }
+  .gt-kill-row input { width: 100%; }
+}
